@@ -9,7 +9,7 @@ pipeline{
 		}
 		stage('Build Docker Image'){
 			steps{
-				sh 'docker medalman/mydemorepo:latest .'
+				sh 'docker build -t medalman/mydemorepo:latest .'
 			}
 		}
 		stage('Push Docker Image'){
