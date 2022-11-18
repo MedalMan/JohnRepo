@@ -3,26 +3,20 @@ pipeline{
         stages{
                 stage('SCM Checkout'){
                         steps{
-                        }
                                 git branch: 'main', credentialsId: 'medal-cred', url: 'https://github.com/MedalMan/JohnRepo.git'
+                        }
 
                 }
                 stage('Build Docker Image'){
-                    steps{
+                        steps{
                                 sh 'docker medalman/mydemorepo:latest .';
-		       }   
-		    }
+                        }
                 }
                 stage('Push Docker Image'){
-                    steps{
-			script{
-                           withCredentials([string(credentialsId: 'medal-cred', variable: 'dockerhubpwd')]) {
-			   sh 'docker login -u medalman -p ${dockerhubpwd}'
-			       
-}
-                           sh 'docker push medalman/mydemorepo:latest'
-                   }
-            }
+                        steps{
+                            sh 'docker push medalman/mydemorepo:latest';
+                        }
+
+                }
         }
-    }
 }
