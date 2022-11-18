@@ -12,6 +12,14 @@ pipeline{
 				sh 'docker build -t medalman/mydemorepo:latest .'
 			}
 		}
+		
+		stage('Login') {
+            
+            steps {
+                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_USR --password-stin'
+            }
+        }
+		
 		stage('Push Docker Image'){
 			steps{
 			    sh 'docker push medalman/mydemorepo:latest'
