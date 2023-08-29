@@ -1,0 +1,184 @@
+{
+    "TemplateFormatVersion": "2010-09-09",
+    "Parameters": {
+        "KeyName": {
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access to the ECS instances."
+        },
+        "ECSClusterName": {
+            "Type": "String",
+            "Description": "Name of the Cluster",
+            "AllowedPattern": "^[a-zA-Z0-9]*$"
+        },
+        "VpcId": {
+            "Type": "AWS::EC2::VPC::Id",
+            "Description": "A VPC that allows instances to access the Internet."
+        },
+        "SubnetId": {
+            "Type": "List<AWS::EC2::Subnet::Id>",
+            "Description": "Subnets that can be used to access the EC2 instances"
+        },
+        "TaskDefinitionName": {
+            "Type": "String",
+            "Description": "Task Definition name"
+        },
+        "SecurityGroupId": {
+            "Type": "List<AWS::EC2::SecurityGroup::Id>",
+            "Description": "Select a Security Group within your selected VPC."
+        },
+        "DesiredCount": {
+            "Type": "Number",
+            "Default": "1",
+            "Description": "Number of instances to launch in ECS cluster."
+        }
+    },
+    "Resources": {
+        "ECSCluster": {
+            "Type": "AWS::ECS::Cluster",
+            "Properties": {
+                "ClusterName": {
+                    "Ref": "ECSClusterName"
+                }
+            }
+        },
+        "EcsSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VpcId"
+                },
+                "GroupName": "ECS Security Group",
+                "Description": "Security group for ECS instances",
+                "GroupId": {
+                    "Ref": "SecurityGroupId"
+                }
+            }
+        },
+        "EcsSecurityGroupALBports": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "SecurityGroupId"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": "1337",
+                "ToPort": "1337",
+                "CidrIp": "0.0.0.0/0"
+            },
+            "GroupId": {
+                "Ref": "SecurityGroupId"
+            },
+            "IpProtocol": "tcp",
+            "FromPort": 3000,
+            "ToPort": 3000,
+            "CidrIp": "0.0.0.0/0"
+        }
+    },
+    "CloudwatchLogsGroup": {
+        "Type": "AWS::Logs::LogGroup",
+        "Properties": {
+            "LogGroupName": {
+                "Fn::Join": [
+                    "-",
+                    [
+                        "ECSLogGroup",
+                        {
+                            "Ref": "AWS::StackName"
+                        }
+                    ]
+                ]
+            },
+            "RetentionInDays": 30
+        }
+    },
+    "ECSTaskDefinition": {
+        "Type": "AWS::ECS::TaskDefinition",
+        "Properties": {
+            "Family": "strapi",
+            "Cpu": "256",
+            "Memory": "512",
+            "NetworkMode": "awsvpc",
+            "ExecutionRoleArn": "arn:aws:iam::306251499781:role/ecsTaskExecutionRole",
+            "ContainerDefinitions": [
+                {
+                    "Name": "frontend",
+                    "Image": "306251499781.dkr.ecr.us-gov-west-1.amazonaws.com/aero-strapi-ecr-imagerepo",
+                    "Essential": true,
+                    "Memory": 512,
+                    "Cpu": 256,
+                    "PortMappings": [
+                        {
+                            "ContainerPort": 3000
+                        }
+                    ]
+                }
+            ],
+            "healthCheck": {
+                "command": [
+                    "CMD",
+                    "curl",
+                    "--fail",
+                    "http://localhost:3000"
+                ],
+                "interval": 300
+            },
+            "environment": {
+                "name": "AWS_REGION",
+                "value": "US-Gov-West"
+            },
+            "name": [
+                "AWS_SDK_LOAD_CONFIG",
+                "load config from ~/.aws"
+            ],
+            "value": 1
+        },
+        "name": "NEXT_PUBLIC_STRAPI_API_URL",
+        "value": "http://internal-lb-aero-wmd-apis-440038663.us-gov-west-1.elb.amazonaws.com:1337"
+    },
+    "LogConfiguration": {
+        "LogDriver": "awslogs",
+        "Options": {
+            "awslogs-group": {
+                "Ref": "CloudwatchLogsGroup"
+            },
+            "awslogs-region": "US-Gov-West",
+            "awslogs-stream-prefix": "frontend"
+        }
+    },
+    "Environment": [
+        {
+            "Name": "AWS_REGION",
+            "Value": "US-Gov-West"
+        },
+        {
+            "name": [
+                "AWS_SDK_LOAD_CONFIG",
+                "load config from ~/.aws"
+            ],
+            "value": 1
+        },
+        {
+            "name": "PROXY",
+            "value": "true"
+        },
+        {
+            "Name": "NEXT_PUBLIC_STRAPI_API_URL",
+            "Value": "http://internal-lb-aero-wmd-apis-440038663.us-gov-west-1.elb.amazonaws.com:1337"
+        }
+    ],
+"ECSService": {
+    "Type": "AWS::ECS::Service",
+    "Properties": {
+        "Cluster": {
+            "Ref": "ECSClusterName"
+        },
+        "TaskDefinition": {
+            "Ref": "TaskDefinitionName"
+        },
+        "DesiredCount": {
+            "Ref": "DesiredCount"
+        },
+        "LaunchType": "EC2"
+       } 
+    }
+}
