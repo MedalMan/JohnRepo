@@ -1,0 +1,124 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "VpcId": {
+      "Type": "AWS::EC2::VPC::VpcId",
+      "Description": "Select a VPC that allows instances to access the Internet."
+    },
+    "SubnetId": {
+      "Type": "List<AWS::EC2::Subnet::Id>",
+      "Description": "Select at least two subnets in your selected VPC."
+    }
+  },
+  "Resources": {
+    "MountTargetVPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/16",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "MountTargetVPC"
+          }
+        ]
+      }
+    },
+    "MountTargetSubnetOne": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "AvailabilityZone": "US-Gov-West-1a"
+      }
+    },
+    "MountTargetSubnetTwo": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "AvailabilityZone": "US-Gov-West-1b"
+      }
+    },
+    "FileSystemResource": {
+      "Type": "AWS::EFS::FileSystem",
+      "Properties": {
+        "FileSystemTags": [
+          {
+            "Key": "Name",
+            "Value": "Aero-FileSystem"
+          }
+        ],
+        "BackupPolicy": {
+          "Status": "ENABLED"
+        },
+        "Encrypted": true
+      }
+    },
+    "Policy": {
+      "Type": "AWS::IAM::ManagedPolicy",
+      "Properties": {
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "Statement",
+              "Effect": "Allow",
+              "Principal": "*",
+              "Action": [
+                "elasticfilesystem:ClientMount",
+                "elasticfilesystem:ClientRootAccess",
+                "elasticfilesystem:ClientWrite"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "AccessPoint": {
+      "Type": "AWS::EFS::AccessPoint",
+      "Properties": {
+        "FileSystemId": {
+          "Ref": "FileSystemResource"
+        },
+        "PosixUser": {
+          "Uid": "1000",
+          "Gid": "1000"
+        }
+      }
+    },
+    "ECSService": {
+      "Type": "AWS::ECS::Service",
+      "Properties": {
+        "Cluster": {
+          "Ref": "ECSCluster"
+        },
+        "DesiredCount": 1,
+        "EnableExecuteCommand": true,
+        "LaunchType": "EC2",
+        "TaskDefinition": {
+          "Ref": "ECSTaskDefinition"
+        },
+        "LoadBalancers": [
+          {
+            "TargetGroupArn": {
+              "Ref": "TargetGroup"
+            },
+            "ContainerPort": 80,
+            "ContainerName": "Strapi-app",
+            "SecurityGroups": [
+              "sg-095323ce843ffea89"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
