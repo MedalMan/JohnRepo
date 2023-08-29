@@ -2,7 +2,7 @@
   "AWSTemplateFormatVersion": "2010-09-09",
   "Parameters": {
     "VpcId": {
-      "Type": "AWS::EC2::VPC::VpcId",
+      "Type": "AWS::EC2::VPC::Id",
       "Description": "Select a VPC that allows instances to access the Internet."
     },
     "SubnetId": {
@@ -29,7 +29,7 @@
         "VpcId": {
           "Ref": "VpcId"
         },
-        "AvailabilityZone": "US-Gov-West-1a"
+        "AvailabilityZone": "us-gov-west-1a"
       }
     },
     "MountTargetSubnetTwo": {
@@ -38,7 +38,7 @@
         "VpcId": {
           "Ref": "VpcId"
         },
-        "AvailabilityZone": "US-Gov-West-1b"
+        "AvailabilityZone": "us-gov-west-1b"
       }
     },
     "FileSystemResource": {
