@@ -1,0 +1,188 @@
+{
+    "Resources": {
+        "LogConfiguration": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+                "LogGroupName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "ecs",
+                            "ec2-task-definition",
+                            {
+                                "Ref": "AWS::StackName"
+                            },
+                            "backend"
+                        ]
+                    ]
+                },
+                "RetentionInDays": 30
+            }
+        },
+        "PortMappings": {
+            "Type": "ContainerPort",
+            "Properties": {
+                "ContainerPort": 1337
+            }
+        },
+        "HealthCheck": {
+            "Type": "AWS::ECS::TaskDefinition",
+            "Properties": {
+                "ContainerDefinitions": [
+                    {
+                        "Name": "backend",
+                        "HealthCheck": {
+                            "Command": [
+                                "CMD",
+                                "curl",
+                                "--fail",
+                                "http://localhost:1337/_health"
+                            ],
+                            "Interval": 300
+                        }
+                    }
+                ]
+            }
+        },
+        "StrapiEnvironment": {
+            "Type": "AWS::ECS::TaskDefinition",
+            "Properties": {
+                "ContainerDefinitions": [
+                    {
+                        "Name": "backend",
+                        "Environment": [
+                            {
+                                "Name": "AWS_REGION",
+                                "Value": "US-Gov-West"
+                            },
+                            {
+                                "Name": "AWS_SDK_LOAD_CONFIG",
+                                "Value": "load config from ~/.aws"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "StrapiValue": {
+            "Type": "AWS::ECS::TaskDefinition",
+            "Properties": {
+                "ContainerDefinitions": [
+                    {
+                        "Name": "backend",
+                        "Environment": [
+                            {
+                                "Name": "AWS_REGION",
+                                "Value": "US-Gov-West"
+                            },
+                            {
+                                "Name": "AWS_SDK_LOAD_CONFIG",
+                                "Value": "1"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "ProxySettings": {
+            "Type": "AWS::ECS::TaskDefinition",
+            "Properties": {
+                "ContainerDefinitions": [
+                    {
+                        "Name": "backend",
+                        "Environment": {
+                            "PROXY": "true",
+                            "STRAPI_TELEMETRY_DISABLED": "true",
+                            "URL": "http://internal-lb-aero-wmd-apis-440038663.us-gov-west-1.elb.amazonaws.com:1337"
+                        }
+                    }
+                ]
+            }
+        },
+        "SecretsAdminJwt": {
+            "Type": "AWS::ECS::TaskDefinition",
+            "Properties": {
+                "ContainerDefinitions": [
+                    {
+                        "Name": "backend",
+                        "Secrets": [
+                            {
+                                "Name": "ADMIN_JWT_SECRET",
+                                "ValueFrom": "tobemodified"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "SecretsApiTokenSalt": {
+            "Type": "AWS::ECS::TaskDefinition",
+            "Properties": {
+                "ContainerDefinitions": [
+                    {
+                        "Name": "backend",
+                        "Secrets": [
+                            {
+                                "Name": "API_TOKEN_SALT",
+                                "ValueFrom": "tobemodified"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "SecretsAppKeys": {
+            "Type": "AWS::ECS::TaskDefinition",
+            "Properties": {
+                "ContainerDefinitions": [
+                    {
+                        "Name": "backend",
+                        "Secrets": [
+                            {
+                                "Name": "APP_KEYS",
+                                "ValueFrom": [
+                                    "toBeModified1",
+                                    "toBeModified2"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "LogConfigurationBackend": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+                "LogGroupName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "ecs",
+                            "ec2-task-definition",
+                            {
+                                "Ref": "AWS::StackName"
+                            },
+                            "backend"
+                        ]
+                    ]
+                },
+                "RetentionInDays": 30
+            }
+        },
+        "ECSService": {
+            "Type": "AWS::ECS::Service",
+            "Properties": {
+                "Cluster": {
+                    "Ref": "ECSClusterName"
+                },
+                "TaskDefinition": {
+                    "Ref": "TaskDefinitionName"
+                },
+                "DesiredCount": {
+                    "Ref": "DesiredCount"
+                },
+                "LaunchType": "EC2"
+            }
+        }
+    }
+}
