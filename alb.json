@@ -1,0 +1,152 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+      "VpcId": {
+          "Type": "AWS::EC2::VPC::Id",
+          "Description": "Select a VPC that allows instances to access the Internet."
+      },
+      "SubnetId": {
+          "Type": "List<AWS::EC2::Subnet::Id>",
+          "Description": "Select at least two subnets in your selected VPC."
+      },
+      "SecurityGroup": {
+          "Type": "AWS::EC2::EcsSecurityGroup::Id",
+          "Description": "Select a Security Group within your selected VPC."
+      },
+      "TargetGroup": {
+          "Type": "AWS::EC2::TargetGroup::Id",
+          "Description": "Select a Target Group within your selected VPC."
+      }
+  },
+  "Resources": {
+      "LoadBalancer": {
+          "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+          "Properties": {
+              "AvailabilityZones": "Us-Gov-West-1a",
+              "Listeners": [{
+                  "LoadBalancerPort": "80",
+                  "InstancePort": "80",
+                  "Protocol": "HTTP"
+              }],
+              "Subnets": {
+                  "Ref": "SubnetId"
+              },
+              "GroupId": {
+                  "Ref": "SecurityGroupId"
+              }
+          }
+      },
+      "BackendTargetGroup": {
+          "Type": "AWS::ElasticLoadBalancingV2::TargetGroup1",
+          "Properties": {
+              "Name": "backend_TG",
+              "Port": "1337",
+              "Protocol": "HTTP",
+              "VpcId": {
+                  "Ref": "VpcId"
+              },
+              "TargetType": "ip",
+              "health checks": {
+                  "HealthyThreshold": "3",
+                  "Interval": "300",
+                  "protocol": "HTTP",
+                  "Matcher": "200,204",
+                  "Timeout": "30",
+                  "Path": "/_health",
+                  "UnhealthyThreshold": "2"
+              }
+          }
+      },
+      "FrontendTargetGroup": {
+          "Type": "AWS::ElasticLoadBalancingV2::TargetGroup2",
+          "Properties": {
+              "Name": "frontend_TG",
+              "Port": "3000",
+              "Protocol": "HTTP",
+              "VpcId": {
+                  "Ref": "VpcId"
+              },
+              "TargetType": "ip",
+              "health checks": {
+                  "HealthyThreshold": "3",
+                  "Interval": "300",
+                  "protocol": ["HTTP", "#tfsec:ignore:AWS004 - uses plain HTTP instead of HTTPS"],
+                  "Matcher": "200,204",
+                  "Timeout": "30",
+                  "Path": "/_health",
+                  "UnhealthyThreshold": "2"
+              }
+          }
+      },
+      "BackendListenerRule": {
+          "Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+          "Properties": {
+              "LoadBalancerARN": "arn:aws-us-gov:elasticloadbalancing:us-gov-west-1:306251499781:loadbalancer/app/lb-aero-wmd-apis/170fc9e31efe3078",
+              "name": "backend",
+              "Protocol": "HTTP",
+              "DefaultAction": {
+                  "Type": "Forward",
+                  "TargetGroup": {
+                      "Ref": "backend_TG"
+                  },
+                  "VpcId": {
+                      "Ref": "VpcId"
+                  },
+                  "Subnets": {
+                      "Ref": "SubnetId"
+                  }
+              }
+          }
+      },
+      "FrontendListenerRule": {
+          "Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+          "Properties": {
+              "LoadBalancerARN": "arn:aws-us-gov:elasticloadbalancing:us-gov-west-1:306251499781:loadbalancer/app/lb-aero-wmd-apis/170fc9e31efe3078",
+              "name": "frontend",
+              "Protocol": "HTTP",
+              "DefaultAction": {
+                  "Type": "Forward",
+                  "TargetGroup": {
+                      "Ref": "backend_TG"
+                  },
+                  "VpcId": {
+                      "Ref": "VpcId"
+                  },
+                  "Subnets": {
+                      "Ref": "SubnetId"
+                  }
+              }
+          }
+      },
+      "ALBSecurityGroup": {
+          "GroupId": {
+              "Ref": "SecurityGroupId"
+          },
+          "SecurityGroupIngress": [{
+              "IpProtocol": "tcp",
+              "FromPort": 80,
+              "ToPort": 80,
+              "CidrIp": "0.0.0.0/0"
+          }, {
+              "IpProtocol": "tcp",
+              "FromPort": 3000,
+              "ToPort": 3000,
+              "CidrIp": ["0.0.0.0/0", "#tfsec:ignore:AWS008"]
+          }],
+          "VpcId": {
+              "Ref": "VpcId"
+          }
+      },
+      "BackendSecurityGroup": {
+          "BackEndPort": [{
+              "IpProtocol": "tcp",
+              "FromPort": 1337,
+              "ToPort": 1337,
+              "CidrIp": ["0.0.0.0/0", "#tfsec:ignore:AWS008"]
+          }]
+      },
+      "EgressRules": {
+          "egress_rules": ["all-all"]
+      }
+  }
+}
