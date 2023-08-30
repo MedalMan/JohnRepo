@@ -1,0 +1,708 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Parameters": {
+        "KeyName": {
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access to the ECS instances."
+        },
+        "ECSClusterName": {
+            "Type": "String",
+            "Description": "Name of the Cluster",
+            "AllowedPattern": "^[a-zA-Z0-9]*$"
+        },
+        "VpcId": {
+            "Type": "AWS::EC2::VPC::Id",
+            "Description": "A VPC that allows instances to access the Internet."
+        },
+        "SubnetId": {
+            "Type": "List<AWS::EC2::Subnet::Id>",
+            "Description": "Subnets that can be used to access the EC2 instances"
+        },
+        "TaskDefinitionName": {
+            "Type": "String",
+            "Description": "Task Definition name"
+        },
+        "SecurityGroupId": {
+            "Type": "List<AWS::EC2::SecurityGroup::Id>",
+            "Description": "Select a Security Group within your selected VPC."
+        },
+        "DesiredCount": {
+            "Type": "Number",
+            "Default": "1",
+            "Description": "Number of instances to launch in ECS cluster."
+        }
+    },
+    "Resources": {
+        "ECSCluster": {
+            "Type": "AWS::ECS::Cluster",
+            "Properties": {
+                "ClusterName": {
+                    "Ref": "ECSClusterName"
+                }
+            }
+        },
+        "EcsSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VpcId"
+                },
+                "GroupName": "ECS Security Group",
+                "Description": "Security group for ECS instances"
+            }
+        },
+        "EcsSecurityGroupALBports": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "SecurityGroupId"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": 1337,
+                "ToPort": 1337,
+                "CidrIp": "0.0.0.0/0"
+            }
+        }
+    },
+        "CloudwatchLogsGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+                "LogGroupName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "ECSLogGroup",
+                            {
+                                "Ref": "AWS::StackName"
+                            }
+                        ]
+                    ]
+                },
+                "RetentionInDays": 30
+            }
+        },
+        "ECSTaskDefinition": {
+            "Type": "AWS::ECS::TaskDefinition",
+            "Properties": {
+                "Family": "strapi",
+                "Cpu": "256",
+                "Memory": "512",
+                "NetworkMode": "awsvpc",
+                "ExecutionRoleArn": "arn:aws:iam::306251499781:role/ecsTaskExecutionRole",
+                "ContainerDefinitions": [
+                    {
+                        "Name": "frontend",
+                        "Image": "306251499781.dkr.ecr.us-gov-west-1.amazonaws.com/aero-strapi-ecr-imagerepo",
+                        "Essential": true,
+                        "Memory": 512,
+                        "Cpu": 256,
+                        "PortMappings": [
+                            {
+                                "ContainerPort": 3000
+                            }
+                        ]
+                    }
+                ],
+                "HealthCheck": {
+                    "Command": [
+                        "CMD",
+                        "curl",
+                        "--fail",
+                        "http://localhost:3000"
+                    ],
+                    "Interval": 300
+                },
+                "Environment": [
+                    {
+                        "Name": "AWS_REGION",
+                        "Value": "US-Gov-West"
+                    },
+                    {
+                        "Name": "NEXT_PUBLIC_STRAPI_API_URL",
+                        "Value": "http://internal-lb-aero-wmd-apis-440038663.us-gov-west-1.elb.amazonaws.com:1337"
+                    }
+                ]
+            }
+        },
+        "LogConfiguration": {
+            "LogDriver": "awslogs",
+            "Options": {
+                "awslogs-group": {
+                    "Ref": "CloudwatchLogsGroup"
+                },
+                "awslogs-region": "US-Gov-West",
+                "awslogs-stream-prefix": "frontend"
+            }
+ } },
+        {
+        "ECSService": {
+            "Type": "AWS::ECS::Service",
+            "Properties": {
+                "Cluster": {
+                    "Ref": "ECSClusterName"
+                },
+                "TaskDefinition": {
+                    "Ref": "TaskDefinitionName"
+                },
+                "DesiredCount": {
+                    "Ref": "DesiredCount"
+                },
+                "LaunchType": "EC2"
+          }  }},
+
+        "Resources": {
+            "LogConfiguration": {
+                "Type": "AWS::Logs::LogGroup",
+                "Properties": {
+                    "LogGroupName": {
+                        "Fn::Join": [
+                            "-",
+                            [
+                                "ecs",
+                                "ec2-task-definition",
+                                {
+                                    "Ref": "AWS::StackName"
+                                },
+                                "backend"
+                            ]
+                        ]
+                    },
+                    "RetentionInDays": 30
+                
+            },
+            "PortMappings": {
+                "Type": "ContainerPort",
+                "Properties": {
+                    "ContainerPort": 1337
+                }
+            },
+            "HealthCheck": {
+                "Type": "AWS::ECS::TaskDefinition",
+                "Properties": {
+                    "ContainerDefinitions": [
+                        {
+                            "Name": "backend",
+                            "HealthCheck": {
+                                "Command": [
+                                    "CMD",
+                                    "curl",
+                                    "--fail",
+                                    "http://localhost:1337/_health"
+                                ],
+                                "Interval": 300
+                            }
+                        }
+                    ]
+                }
+            },
+            "StrapiEnvironment": {
+                "Type": "AWS::ECS::TaskDefinition",
+                "Properties": {
+                    "ContainerDefinitions": [
+                        {
+                            "Name": "backend",
+                            "Environment": [
+                                {
+                                    "Name": "AWS_REGION",
+                                    "Value": "US-Gov-West"
+                                },
+                                {
+                                    "Name": "AWS_SDK_LOAD_CONFIG",
+                                    "Value": "load config from ~/.aws"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "StrapiValue": {
+                "Type": "AWS::ECS::TaskDefinition",
+                "Properties": {
+                    "ContainerDefinitions": [
+                        {
+                            "Name": "backend",
+                            "Environment": [
+                                {
+                                    "Name": "AWS_REGION",
+                                    "Value": "US-Gov-West"
+                                },
+                                {
+                                    "Name": "AWS_SDK_LOAD_CONFIG",
+                                    "Value": "1"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "ProxySettings": {
+                "Type": "AWS::ECS::TaskDefinition",
+                "Properties": {
+                    "ContainerDefinitions": [
+                        {
+                            "Name": "backend",
+                            "Environment": {
+                                "PROXY": "true",
+                                "STRAPI_TELEMETRY_DISABLED": "true",
+                                "URL": "http://internal-lb-aero-wmd-apis-440038663.us-gov-west-1.elb.amazonaws.com:1337"
+                            }
+                        }
+                    ]
+                }
+            },
+            "SecretsAdminJwt": {
+                "Type": "AWS::ECS::TaskDefinition",
+                "Properties": {
+                    "ContainerDefinitions": [
+                        {
+                            "Name": "backend",
+                            "Secrets": [
+                                {
+                                    "Name": "ADMIN_JWT_SECRET",
+                                    "ValueFrom": "tobemodified"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "SecretsApiTokenSalt": {
+                "Type": "AWS::ECS::TaskDefinition",
+                "Properties": {
+                    "ContainerDefinitions": [
+                        {
+                            "Name": "backend",
+                            "Secrets": [
+                                {
+                                    "Name": "API_TOKEN_SALT",
+                                    "ValueFrom": "tobemodified"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "SecretsAppKeys": {
+                "Type": "AWS::ECS::TaskDefinition",
+                "Properties": {
+                    "ContainerDefinitions": [
+                        {
+                            "Name": "backend",
+                            "Secrets": [
+                                {
+                                    "Name": "APP_KEYS",
+                                    "ValueFrom": [
+                                        "toBeModified1",
+                                        "toBeModified2"
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "LogConfigurationBackend": {
+                "Type": "AWS::Logs::LogGroup",
+                "Properties": {
+                    "LogGroupName": {
+                        "Fn::Join": [
+                            "-",
+                            [
+                                "ecs",
+                                "ec2-task-definition",
+                                {
+                                    "Ref": "AWS::StackName"
+                                },
+                                "backend"
+                            ]
+                        ]
+                    },
+                    "RetentionInDays": 30
+                }
+            },
+            "ECSService": {
+                "Type": "AWS::ECS::Service",
+                "Properties": {
+                    "Cluster": {
+                        "Ref": "ECSClusterName"
+                    },
+                    "TaskDefinition": {
+                        "Ref": "TaskDefinitionName"
+                    },
+                    "DesiredCount": {
+                        "Ref": "DesiredCount"
+                    },
+                    "LaunchType": "EC2"
+                }
+            },
+            "Resources": {
+              "MyRepository": {
+                "Type": "AWS::ECR::Repository",
+                "Properties": {
+                  "RepositoryName": "aero-strapi-ecr-imagerepo",
+                  "RepositoryPolicyText": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Sid": "AllowPushPull",
+                        "Effect": "Allow",
+                        "Principal": {
+                          "AWS": "*"
+                        },
+                        "Action": [
+                          "ecr:GetDownloadUrlForLayer",
+                          "ecr:BatchGetImage",
+                          "ecr:BatchCheckLayerAvailability",
+                          "ecr:PutImage",
+                          "ecr:InitiateLayerUpload",
+                          "ecr:UploadLayerPart",
+                          "ecr:CompleteLayerUpload"
+                        ]
+                      }
+                    ]
+                  },
+                  "LifecyclePolicy": {
+                    "Rules": [
+                      {
+                        "RulePriority": 1,
+                        "Description": "Rule 1",
+                        "Selection": {
+                          "TagStatus": "tagged",
+                          "TagPrefixList": ["prod"],
+                          "CountType": "imageCountMoreThan",
+                          "CountNumber": 1
+                        },
+                        "Action": {
+                          "Type": "expire"
+                        }
+                      },
+                      {
+                        "RulePriority": 2,
+                        "Selection": {
+                          "TagStatus": "tagged",
+                          "TagPrefixList": ["beta"],
+                          "CountType": "imageCountMoreThan",
+                          "CountNumber": 1
+                        },
+                        "Action": {
+                          "Type": "expire"
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "MyRepositoryConfig": {
+                "Type": "AWS::ECR::Repository",
+                "Properties": {
+                  "RepositoryName": "aero-strapi-ecr-imagerepo",
+                  "ImageScanningConfiguration": {
+                    "scanOnPush": false
+                  }
+                }
+              }
+            }
+          },
+            "AWSTemplateFormatVersion": "2010-09-09",
+            "Parameters": {
+                "VpcId": {
+                    "Type": "AWS::EC2::VPC::Id",
+                    "Description": "Select a VPC that allows instances to access the Internet."
+                },
+                "SubnetId": {
+                    "Type": "List<AWS::EC2::Subnet::Id>",
+                    "Description": "Select at least two subnets in your selected VPC."
+                },
+                "FileSystemId": {
+                    "Type": "List<AWS::EFS::FileSystem>",
+                    "Description": "Select a File System ID"
+                },
+                "Id": {
+                    "Type": "List<AWS::EC2::SecurityGroup::Id",
+                    "Description": "Select a Security Group within your selected VPC."
+                }
+                },
+                "Resources": {
+                    "MountTargetVPC": {
+                        "Type": "AWS::EC2::VPC",
+                        "Properties": {
+                            "CidrBlock": "10.0.0.0/16",
+                            "Tags": [
+                                {
+                                    "Key": "Name",
+                                    "Value": "MountTargetVPC"
+                                }
+                            ]
+                        }
+                    },
+                    "MountTargetSubnetOne": {
+                        "Type": "AWS::EC2::Subnet",
+                        "Properties": {
+                            "VpcId": {
+                                "Ref": "VpcId"
+                            },
+                            "AvailabilityZone": "us-gov-west-1a"
+                        }
+                    },
+                    "MountTargetSubnetTwo": {
+                        "Type": "AWS::EC2::Subnet",
+                        "Properties": {
+                            "VpcId": {
+                                "Ref": "VpcId"
+                            },
+                            "AvailabilityZone": "us-gov-west-1b"
+                        }
+                    },
+                    "FileSystemResource": {
+                        "Type": "AWS::EFS::FileSystem",
+                        "Properties": {
+                            "FileSystemId": {
+                                "Ref": "FileSystemId"
+                            },
+                            "FileSystemTags": [
+                                {
+                                    "Key": "Name",
+                                    "Value": "Aero-FileSystem"
+                                }
+                            ],
+                            "BackupPolicy": {
+                                "Status": "ENABLED"
+                            },
+                            "Encrypted": true
+                        }
+                    },
+                    "Policy": {
+                        "Type": "AWS::IAM::ManagedPolicy",
+                        "Properties": {
+                            "PolicyDocument": {
+                                "Version": "2012-10-17",
+                                "Statement": [
+                                    {
+                                        "Sid": "Statement",
+                                        "Effect": "Allow",
+                                        "Principal": "*",
+                                        "Action": [
+                                            "elasticfilesystem:ClientMount",
+                                            "elasticfilesystem:ClientRootAccess",
+                                            "elasticfilesystem:ClientWrite"
+                                        ],
+                                        "Resource": "*",
+                                        "Condition": {
+                                            "Bool": {
+                                                "aws:SecureTransport": "false"
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "AccessPoint": {
+                        "Type": "AWS::EFS::AccessPoint",
+                        "Properties": {
+                            "FileSystemId": {
+                                "Ref": "FileSystemId"
+                            },
+                            "PosixUser": {
+                                "Uid": "1000",
+                                "Gid": "1000"
+                            }
+                        }
+                    },
+                    "ECSService": {
+                        "Type": "AWS::ECS::Service",
+                        "Properties": {
+                            "Cluster": {
+                                "Ref": "ECSCluster"
+                            },
+                            "DesiredCount": 1,
+                            "EnableExecuteCommand": true,
+                            "LaunchType": "EC2",
+                            "TaskDefinition": {
+                                "Ref": "ECSTaskDefinition"
+                            },
+                            "LoadBalancers": [
+                                {
+                                    "TargetGroupArn": {
+                                        "Ref": "TargetGroup"
+                                    },
+                                    "ContainerPort": 80,
+                                    "ContainerName": "Strapi-app",
+                                    "SecurityGroups": [
+                                        {
+                                            "Ref": "SecurityGroupId"
+                                        }
+                                    ],
+                                }
+                            ]
+                        }
+                    }
+                },
+            "AWSTemplateFormatVersion": "2010-09-09",
+            "Parameters": {
+              "VpcId": {
+                "Type": "AWS::EC2::VPC::Id",
+                "Description": "Select a VPC that allows instances to access the Internet."
+              },
+              "SubnetId": {
+                "Type": "List<AWS::EC2::Subnet::Id>",
+                "Description": "Select at least two subnets in your selected VPC."
+              },
+              "SecurityGroupId": {
+                "Type": "List<AWS::EC2::Subnet::Id>",
+                "Description": "Select a Security Group within your selected VPC."
+              },
+              "TargetGroup": {
+                "Type": "AWS::ElasticLoadBalancingV2::TargetGroup::Id",
+                "Description": "Select a Target Group within your selected VPC."
+              }
+            },
+            "Resources": {
+              "LoadBalancer": {
+                "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+                "Properties": {
+                  "Subnets": {
+                    "Ref": "SubnetId"
+                  },
+                  "SecurityGroups": [
+                    {
+                      "Ref": "SecurityGroupId"
+                    }
+                  ],
+                  "Listeners": [
+                    {
+                      "LoadBalancerPort": "80",
+                      "InstancePort": "80",
+                      "Protocol": "HTTP"
+                    }
+                  ]
+                }
+              },
+              "BackendTargetGroup": {
+                "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+                "Properties": {
+                  "Name": "backend_TG",
+                  "Port": 1337,
+                  "Protocol": "HTTP",
+                  "VpcId": {
+                    "Ref": "VpcId"
+                  },
+                  "TargetType": "ip",
+                  "HealthCheckEnabled": true,
+                  "HealthCheckIntervalSeconds": 300,
+                  "HealthCheckProtocol": "HTTP",
+                  "HealthyThresholdCount": 3,
+                  "Matcher": "200-299",
+                  "UnhealthyThresholdCount": 2,
+                  "HealthCheckTimeoutSeconds": 30,
+                  "HealthCheckPath": "/_health"
+                }
+              },
+              "FrontendTargetGroup": {
+                "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+                "Properties": {
+                  "Name": "frontend_TG",
+                  "Port": 3000,
+                  "Protocol": "HTTP",
+                  "VpcId": {
+                    "Ref": "VpcId"
+                  },
+                  "TargetType": "ip",
+                  "HealthCheckEnabled": true,
+                  "HealthCheckIntervalSeconds": 300,
+                  "HealthCheckProtocol": "HTTP",
+                  "HealthyThresholdCount": 3,
+                  "Matcher": "200-299",
+                  "UnhealthyThresholdCount": 2,
+                  "HealthCheckTimeoutSeconds": 30,
+                  "HealthCheckPath": "/_health"
+                }
+              },
+              "BackendListenerRule": {
+                "Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+                "Properties": {
+                  "ListenerArn": "arn:aws-us-gov:elasticloadbalancing:us-gov-west-1:306251499781:loadbalancer/app/lb-aero-wmd-apis/170fc9e31efe3078",
+                  "Priority": 1,
+                  "Conditions": [
+                    {
+                      "Field": "path-pattern",
+                      "Values": [
+                        "/backend*"
+                      ]
+                    }
+                  ],
+                  "Actions": [
+                    {
+                      "Type": "forward",
+                      "TargetGroupArn": {
+                        "Ref": "BackendTargetGroup"
+                      }
+                    }
+                  ]
+                }
+              },
+              "FrontendListenerRule": {
+                "Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+                "Properties": {
+                  "ListenerArn": "arn:aws-us-gov:elasticloadbalancing:us-gov-west-1:306251499781:loadbalancer/app/lb-aero-wmd-apis/170fc9e31efe3078",
+                  "Priority": 2,
+                  "Conditions": [
+                    {
+                      "Field": "path-pattern",
+                      "Values": [
+                        "/frontend*"
+                      ]
+                    }
+                  ],
+                  "Actions": [
+                    {
+                      "Type": "forward",
+                      "TargetGroupArn": {
+                        "Ref": "FrontendTargetGroup"
+                      }
+                    }
+                  ]
+                }
+              },
+              "ALBSecurityGroup": {
+                "Type": "AWS::EC2::SecurityGroup",
+                "Properties": {
+                  "GroupDescription": "ALB Security Group",
+                  "VpcId": {
+                    "Ref": "VpcId"
+                  },
+                  "SecurityGroupIngress": [
+                    {
+                      "IpProtocol": "tcp",
+                      "FromPort": 80,
+                      "ToPort": 80,
+                      "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                      "IpProtocol": "tcp",
+                      "FromPort": 3000,
+                      "ToPort": 3000,
+                      "CidrIp": "0.0.0.0/0"
+                    }
+                  ]
+                }
+              },
+              "BackendSecurityGroup": {
+                "Type": "AWS::EC2::SecurityGroup",
+                "Properties": {
+                  "GroupDescription": "Backend Security Group",
+                  "VpcId": {
+                    "Ref": "VpcId"
+                  },
+                  "SecurityGroupIngress": [
+                    {
+                      "IpProtocol": "tcp",
+                      "FromPort": 1337,
+                      "ToPort": 1337,
+                      "CidrIp": "0.0.0.0/0"
+                    }
+                  ]
+                }
+              }
+            }
+          }
