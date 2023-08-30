@@ -216,4 +216,89 @@
       "BackendListenerRule": {
         "Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
         "Properties": {
-          "ListenerArn": "arn:aws-us
+          "ListenerArn": "arn:aws-us-gov:elasticloadbalancing:us-gov-west-1:306251499781:loadbalancer/app/lb-aero-wmd-apis/170fc9e31efe3078",
+          "Priority": 1,
+          "Conditions": [
+            {
+              "Field": "path-pattern",
+              "Values": [
+                "/backend*"
+              ]
+            }
+          ],
+          "Actions": [
+            {
+              "Type": "forward",
+              "TargetGroupArn": {
+                "Ref": "BackendTargetGroup"
+              }
+            }
+          ]
+        }
+      },
+      "FrontendListenerRule": {
+        "Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+        "Properties": {
+          "ListenerArn": "arn:aws-us-gov:elasticloadbalancing:us-gov-west-1:306251499781:loadbalancer/app/lb-aero-wmd-apis/170fc9e31efe3078",
+          "Priority": 2,
+          "Conditions": [
+            {
+              "Field": "path-pattern",
+              "Values": [
+                "/frontend*"
+              ]
+            }
+          ],
+          "Actions": [
+            {
+              "Type": "forward",
+              "TargetGroupArn": {
+                "Ref": "FrontendTargetGroup"
+              }
+            }
+          ]
+        }
+      },
+      "ALBSecurityGroup": {
+        "Type": "AWS::EC2::SecurityGroup",
+        "Properties": {
+          "GroupDescription": "ALB Security Group",
+          "VpcId": {
+            "Ref": "VpcId"
+          },
+          "SecurityGroupIngress": [
+            {
+              "IpProtocol": "tcp",
+              "FromPort": 80,
+              "ToPort": 80,
+              "CidrIp": "0.0.0.0/0"
+            },
+            {
+              "IpProtocol": "tcp",
+              "FromPort": 3000,
+              "ToPort": 3000,
+              "CidrIp": "0.0.0.0/0"
+            }
+          ]
+        }
+      },
+      "BackendSecurityGroup": {
+        "Type": "AWS::EC2::SecurityGroup",
+        "Properties": {
+          "GroupDescription": "Backend Security Group",
+          "VpcId": {
+            "Ref": "VpcId"
+          },
+          "SecurityGroupIngress": [
+            {
+              "IpProtocol": "tcp",
+              "FromPort": 1337,
+              "ToPort": 1337,
+              "CidrIp": "0.0.0.0/0"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
