@@ -1,93 +1,91 @@
-AWSTemplateFormatVersion: 2010-09-09
+AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   KeyName:
-    Type: 'AWS::EC2::KeyPair::KeyName'
+    Type: AWS::EC2::KeyPair::KeyName
     Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
   ECSClusterName:
-    Type: 'AWS::ECS::Cluster'
+    Type: AWS::ECS::Cluster::Name
     Description: Name of the Cluster
   VpcId:
-    Type: 'AWS::EC2::VPC::Id'
+    Type: AWS::EC2::VPC::Id
     Description: A VPC that allows instances to access the Internet.
   SubnetId:
-    Type: 'List<AWS::EC2::Subnet::Id>'
+    Type: List<AWS::EC2::Subnet::Id>
     Description: Subnets that can be used to access the EC2 instances
   TaskDefinitionName:
-    Type: 'AWS::ECS::TaskDefinition::Name'
+    Type: AWS::ECS::TaskDefinition::Family
     Description: Task Definition name
   SecurityGroupId:
-    Type: 'List<AWS::EC2::SecurityGroup::Id>'
+    Type: List<AWS::EC2::SecurityGroup::Id>
     Description: Select a Security Group within your selected VPC.
   DesiredCount:
     Type: Number
-    Default: '1'
-    Description: Number of instances to launch in ECS cluster.
+    Default: 1
+    Description: Number of instances to launch in the ECS cluster.
   ECSLogGroup:
-    Type: 'AWS::Logs::LogGroup'
+    Type: AWS::Logs::LogGroup
     Description: Log Group for ECS.
 Resources:
   ECSCluster:
-    Type: 'AWS::ECS::Cluster'
+    Type: AWS::ECS::Cluster
     Properties:
       ClusterName: !Ref ECSClusterName
   EcsSecurityGroup:
-    Type: 'AWS::EC2::SecurityGroup'
+    Type: AWS::EC2::SecurityGroup
     Properties:
       VpcId: !Ref VpcId
-      GroupName: ECS Security Group
+      GroupName: 'ECS Security Group'
       Description: Security group for ECS instances
   EcsSecurityGroupALBports:
-    Type: 'AWS::EC2::SecurityGroupIngress'
+    Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId: !Ref SecurityGroupId
+      GroupId: !Ref EcsSecurityGroup
       IpProtocol: tcp
       FromPort: 1337
       ToPort: 1337
       CidrIp: 0.0.0.0/0
-CloudwatchLogGroup:
-  Type: 'AWS::Logs::LogGroup'
-  Properties:
-    LogGroupName: !Ref ECSLogGroup
-  RetentionInDays: 30
-ECSTaskDefinition:
-  Type: 'AWS::ECS::TaskDefinition'
-  Properties:
-    Family: strapi
-    Cpu: '256'
-    Memory: '512'
-    NetworkMode: awsvpc
-    ExecutionRoleArn: 'arn:aws:iam::306251499781:role/ecsTaskExecutionRole'
-    ContainerDefinitions:
-      - Name: frontend
-        Image: >-
-          306251499781.dkr.ecr.us-gov-west-1.amazonaws.com/aero-strapi-ecr-imagerepo
-        Essential: true
-        Memory: 512
-        Cpu: 256
-        PortMappings:
-          - ContainerPort: 3000
-    HealthCheck:
-      Command:
-        - CMD
-        - curl
-        - '--fail'
-        - 'http://localhost:3000'
-      Interval: 300
-    Environment:
-      - Name: AWS_REGION
-        Value: US-Gov-West
-      - Name: NEXT_PUBLIC_STRAPI_API_URL
-        Value: >-
-          http://internal-lb-aero-wmd-apis-440038663.us-gov-west-1.elb.amazonaws.com:1337
-LogConfiguration:
-  LogDriver: awslogs
-  Options:
-    awslogsgroup: !Ref ECSLogGroup
-    awslogs-region: US-Gov-West
-    awslogs-stream-prefix: frontend
-ECSService:
-  Type: 'AWS::ECS::Service'
-  Properties:
-    Cluster: !Ref ECSClusterName
-    TaskDefinition: !Ref TaskDefinitionName
-    LaunchType: EC2
+  CloudwatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Ref ECSLogGroup
+      RetentionInDays: 30
+  ECSTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: strapi
+      Cpu: '256'
+      Memory: '512'
+      NetworkMode: awsvpc
+      ExecutionRoleArn: 'arn:aws:iam::306251499781:role/ecsTaskExecutionRole'
+      ContainerDefinitions:
+        - Name: frontend
+          Image: '306251499781.dkr.ecr.us-gov-west-1.amazonaws.com/aero-strapi-ecr-imagerepo'
+          Essential: true
+          Memory: 512
+          Cpu: 256
+          PortMappings:
+            - ContainerPort: 3000
+      HealthCheck:
+        Command:
+          - CMD
+          - curl
+          - --fail
+          - 'http://localhost:3000'
+        Interval: 300
+      Environment:
+        - Name: AWS_REGION
+          Value: US-Gov-West
+        - Name: NEXT_PUBLIC_STRAPI_API_URL
+          Value: 'http://internal-lb-aero-wmd-apis-440038663.us-gov-west-1.elb.amazonaws.com:1337'
+  LogConfiguration:
+    LogDriver: awslogs
+    Options:
+      awslogsgroup: !Ref ECSLogGroup
+      awslogs-region: US-Gov-West
+      awslogs-stream-prefix: frontend
+  ECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref ECSTaskDefinition
+      LaunchType: EC2
