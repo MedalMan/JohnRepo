@@ -2,17 +2,15 @@ Resources:
   LogConfiguration:
     Type: 'AWS::Logs::LogGroup'
     Properties:
-      LogGroupName: !Join 
-        - '-'
-        - - ecs
-          - ec2-task-definition
-          - !Ref 'AWS::StackName'
-          - backend
+      LogGroupName: !Sub 'ecs-ec2-task-definition-${AWS::StackName}-backend'
       RetentionInDays: 30
   PortMappings:
-    Type: ContainerPort
+    Type: 'AWS::ECS::TaskDefinition'
     Properties:
-      ContainerPort: 1337
+      ContainerDefinitions:
+        - Name: backend
+          PortMappings:
+            - ContainerPort: 1337
   HealthCheck:
     Type: 'AWS::ECS::TaskDefinition'
     Properties:
@@ -32,9 +30,9 @@ Resources:
         - Name: backend
           Environment:
             - Name: AWS_REGION
-              Value: US-Gov-West
+              Value: 'US-Gov-West'
             - Name: AWS_SDK_LOAD_CONFIG
-              Value: load config from ~/.aws
+              Value: 'load config from ~/.aws'
   StrapiValue:
     Type: 'AWS::ECS::TaskDefinition'
     Properties:
@@ -42,7 +40,7 @@ Resources:
         - Name: backend
           Environment:
             - Name: AWS_REGION
-              Value: US-Gov-West
+              Value: 'US-Gov-West'
             - Name: AWS_SDK_LOAD_CONFIG
               Value: '1'
   ProxySettings:
@@ -51,10 +49,12 @@ Resources:
       ContainerDefinitions:
         - Name: backend
           Environment:
-            PROXY: 'true'
-            STRAPI_TELEMETRY_DISABLED: 'true'
-            URL: >-
-              http://internal-lb-aero-wmd-apis-440038663.us-gov-west-1.elb.amazonaws.com:1337
+            - Name: PROXY
+              Value: 'true'
+            - Name: STRAPI_TELEMETRY_DISABLED
+              Value: 'true'
+            - Name: URL
+              Value: 'http://internal-lb-aero-wmd-apis-440038663.us-gov-west-1.elb.amazonaws.com:1337'
   SecretsAdminJwt:
     Type: 'AWS::ECS::TaskDefinition'
     Properties:
@@ -84,12 +84,7 @@ Resources:
   LogConfigurationBackend:
     Type: 'AWS::Logs::LogGroup'
     Properties:
-      LogGroupName: !Join 
-        - '-'
-        - - ecs
-          - ec2-task-definition
-          - !Ref 'AWS::StackName'
-          - backend
+      LogGroupName: !Sub 'ecs-ec2-task-definition-${AWS::StackName}-backend'
       RetentionInDays: 30
   ECSService:
     Type: 'AWS::ECS::Service'
