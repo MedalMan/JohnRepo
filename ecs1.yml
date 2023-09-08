@@ -4,7 +4,7 @@ Parameters:
     Type: 'AWS::EC2::KeyPair::KeyName'
     Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
   ECSClusterName:
-    Type: 'AWS::ECS::Cluster::Name'
+    Type: 'List<AWS::ECS::Cluster::Name>'
     Description: Name of the Cluster
   VpcId:
     Type: 'AWS::EC2::VPC::Id'
@@ -16,44 +16,51 @@ Parameters:
     Type: Number
     Default: 1
     Description: Number of instances to launch in the ECS cluster.
-  AeroTargetGroupName:
-    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup::Name'
-    Description: Target Group.
+  StrapiFrontEndTG:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Description: Front End Target Group.
+  StrapiBackEndTG:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Description: Back End Target Group. 
   StrapiFileSystemId:
-    Type: 'AWS::EFS::FileSystem::Id'
+    Type: 'List<AWS::EFS::FileSystem>'
     Description: Select from a list of existing File Systems
   AeroECRRepo:
-    Type: 'AWS::ECR::Repository::Name'
+    Type: 'AWS::ECR::Repository'
     Description: An ECR Repository where Docker images are pushed into
   StrapiALB:
-    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer::Name'
+    Type: 'List<AWS::ElasticLoadBalancingV2::LoadBalancer>'
     Description: Select from a list of existing AWS Load Balancers
+  StrapiMediaAccessPoint:
+    Type: 'AWS::EFS::AccessPoint'
+    Description: An Access Point for the Media
+  StrapidbAccessPoint:
+    Type: 'AWS::EFS::AccessPoint'
+    Description: An Access Point for the DB
 Resources:
   ECSCluster:
-    Type: 'AWS::ECS::Cluster'
+    Type: AWS::ECS::Cluster
     Properties:
       ClusterName: !Ref ECSClusterName
   EcsSecurityGroup:
-    Type: 'AWS::EC2::SecurityGroup'
+    Type: AWS::EC2::SecurityGroup
     Properties:
       VpcId: !Ref VpcId
       GroupName: 'ECS Security Group'
       Description: Security group for ECS instances
   EcsSecurityGroupALBports:
-    Type: 'AWS::EC2::SecurityGroupIngress'
+    Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId: !GetAtt EcsSecurityGroup.GroupId
       IpProtocol: tcp
       FromPort: 1337
       ToPort: 1337
       CidrIp: 0.0.0.0/0
   CloudwatchLogGroup:
-    Type: 'AWS::Logs::LogGroup'
+    Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Ref ECSLogGroup
-      RetentionInDays: 30
-  ECSTaskDefinition:
-    Type: 'AWS::ECS::TaskDefinition'
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
     Properties:
       Family: strapi
       Cpu: '256'
@@ -72,21 +79,116 @@ Resources:
         Command:
           - CMD
           - curl
-          - '--fail'
+          - --fail
           - 'http://localhost:3000'
         Interval: 300
       Environment:
         - Name: AWS_REGION
-          Value: 'US-Gov-West'
+          Value: US-Gov-West
         - Name: NEXT_PUBLIC_STRAPI_API_URL
           Value: 'http://internal-lb-aero-wmd-apis-440038663.us-gov-west-1.elb.amazonaws.com:1337'
   ECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      ClusterName: !Ref ECSClusterName
+      TaskDefinition: !Ref ECSTaskDefinition
+      LaunchType: EC2
+      Resources:
+  LogConfiguration:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub 'ecs-ec2-task-definition-${AWS::StackName}-backend'
+      RetentionInDays: 30
+  PortMappings:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          PortMappings:
+            - ContainerPort: 1337
+  HealthCheck:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          HealthCheck:
+            Command:
+              - CMD
+              - curl
+              - '--fail'
+              - 'http://localhost:1337/_health'
+            Interval: 300
+  StrapiEnvironment:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Environment:
+            - Name: AWS_REGION
+              Value: 'US-Gov-West'
+            - Name: AWS_SDK_LOAD_CONFIG
+              Value: 'load config from ~/.aws'
+  StrapiValue:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Environment:
+            - Name: AWS_REGION
+              Value: 'US-Gov-West'
+            - Name: AWS_SDK_LOAD_CONFIG
+              Value: '1'
+  ProxySettings:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Environment:
+            - Name: PROXY
+              Value: 'true'
+            - Name: STRAPI_TELEMETRY_DISABLED
+              Value: 'true'
+            - Name: URL
+              Value: 'arn:aws-us-gov:elasticloadbalancing:us-gov-west-1:306251499781:loadbalancer/app/lb-aero-hive/8070d708261454aa'
+  SecretsAdminJwt:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Secrets:
+            - Name: ADMIN_JWT_SECRET
+              ValueFrom: tobemodified
+  SecretsApiTokenSalt:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Secrets:
+            - Name: API_TOKEN_SALT
+              ValueFrom: tobemodified
+  SecretsAppKeys:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Secrets:
+            - Name: APP_KEYS
+              ValueFrom:
+                - toBeModified1
+                - toBeModified2
+  LogConfigurationBackend:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub 'ecs-ec2-task-definition-${AWS::StackName}-backend'
+      RetentionInDays: 30
+  ECSService:
     Type: 'AWS::ECS::Service'
     Properties:
-      Cluster: !Ref ECSCluster
+      ClusterName: !Ref ECSClusterName
+      TaskDefinition: !Ref ECSTaskDefinition
       DesiredCount: !Ref DesiredCount
       LaunchType: EC2
-      TaskDefinition: !Ref ECSTaskDefinition
+      Resources:
   MyRepository:
     Type: 'AWS::ECR::Repository'
     Properties:
@@ -130,67 +232,82 @@ Resources:
   MyRepositoryConfig:
     Type: 'AWS::ECR::Repository'
     Properties:
-      RepositoryName: aero-strapi-ecr-imagerepo
+      RepositoryName: !Ref AeroECRRepo
+      ImageScanningConfiguration:
+        scanOnPush: false
+Resources:
+  MyRepository:
+    Type: 'AWS::ECR::Repository'
+    Properties:
+      RepositoryName: !Ref AeroECRRepo
+      RepositoryPolicyText:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowPushPull
+            Effect: Allow
+            Principal:
+              AWS: '*'
+            Action:
+              - 'ecr:GetDownloadUrlForLayer'
+              - 'ecr:BatchGetImage'
+              - 'ecr:BatchCheckLayerAvailability'
+              - 'ecr:PutImage'
+              - 'ecr:InitiateLayerUpload'
+              - 'ecr:UploadLayerPart'
+              - 'ecr:CompleteLayerUpload'
+      LifecyclePolicy:
+        Rules:
+          - RulePriority: 1
+            Description: Rule 1
+            Selection:
+              TagStatus: tagged
+              TagPrefixList:
+                - prod
+              CountType: imageCountMoreThan
+              CountNumber: 1
+            Action:
+              Type: expire
+          - RulePriority: 2
+            Selection:
+              TagStatus: tagged
+              TagPrefixList:
+                - beta
+              CountType: imageCountMoreThan
+              CountNumber: 1
+            Action:
+              Type: expire
+  MyRepositoryConfig:
+    Type: 'AWS::ECR::Repository'
+    Properties:
+      RepositoryName: !Ref AeroECRRepo
       ImageScanningConfiguration:
         scanOnPush: false
 Resources:
   MyLoadBalancer:
     Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
     Properties:
-      LoadBalancerName: !Ref StrapiALB
-      SecurityGroups: [!Ref ALBSecurityGroup]
-      Scheme: internet-facing
-      Subnets:
-        - !Ref MountTargetSubnetOne
-        - !Ref MountTargetSubnetTwo
-      LoadBalancerAttributes:
-        - Key: idle_timeout.timeout_seconds
-          Value: '60'
+      LoadBalancer: !Ref StrapiALB
+      SecurityGroups:
       Listeners:
-        - Port: 80
+        - LoadBalancerPort: '80'
+          InstancePort: '80'
           Protocol: HTTP
-          DefaultActions:
-            - Type: fixed-response
-              FixedResponseConfig:
-                ContentType: text/plain
-                StatusCode: 200
-                ContentType: 'OK'
   BackendTargetGroup:
     Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
     Properties:
-      Name: backend_TG
-      Port: 1337
-      Protocol: HTTP
-      VpcId: !Ref VpcId
-      TargetType: ip
-      HealthCheckEnabled: true
-      HealthCheckIntervalSeconds: 300
-      HealthCheckProtocol: HTTP
-      HealthyThresholdCount: 3
-      Matcher: 200-299
-      UnhealthyThresholdCount: 2
-      HealthCheckTimeoutSeconds: 30
-      HealthCheckPath: /_health
+     TargetGroupName: !Ref StrapiBackEndTG
+
   FrontendTargetGroup:
     Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
     Properties:
-      Name: frontend_TG
-      Port: 3000
-      Protocol: HTTP
-      VpcId: !Ref VpcId
-      TargetType: ip
-      HealthCheckEnabled: true
-      HealthCheckIntervalSeconds: 300
-      HealthCheckProtocol: HTTP
-      HealthyThresholdCount: 3
-      Matcher: 200-299
-      UnhealthyThresholdCount: 2
-      HealthCheckTimeoutSeconds: 30
+      TargetGroupName: !Ref StrapiFrontEndTG
+    
       HealthCheckPath: /_health
   BackendListenerRule:
     Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
     Properties:
-      ListenerArn: !GetAtt MyLoadBalancer.LoadBalancerArn
+      ListenerArn: >-
+        arn:aws-us-gov:elasticloadbalancing:us-gov-west-1:306251499781:loadbalancer/app/lb-aero-wmd-apis/170fc9e31efe3078
       Priority: 1
       Conditions:
         - Field: path-pattern
@@ -198,11 +315,12 @@ Resources:
             - /backend*
       Actions:
         - Type: forward
-          TargetGroupArn: !Ref BackendTargetGroup
+          TargetGroupName: !Ref StrapiFrontEndTG
   FrontendListenerRule:
     Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
     Properties:
-      ListenerArn: !GetAtt MyLoadBalancer.LoadBalancerArn
+      ListenerArn: >-
+        arn:aws-us-gov:elasticloadbalancing:us-gov-west-1:306251499781:listener/app/lb-aero-hive/8070d708261454aa/ae18abd29dd3691f
       Priority: 2
       Conditions:
         - Field: path-pattern
@@ -210,7 +328,7 @@ Resources:
             - /frontend*
       Actions:
         - Type: forward
-          TargetGroupArn: !Ref FrontendTargetGroup
+          TargetGroupName: !Ref StrapiFrontEndTG
   ALBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -283,6 +401,15 @@ Resources:
   AccessPoint:
     Type: 'AWS::EFS::AccessPoint'
     Properties:
+    AccessPoint: !Ref StrapiMediaAccessPoint
+      FileSystemId: !Ref StrapiFileSystemId
+      PosixUser:
+        Uid: '1000'
+        Gid: '1000'
+          AccessPoint:
+    Type: 'AWS::EFS::AccessPoint'
+    Properties:
+    AccessPoint: !Ref StrapidbAccessPoint
       FileSystemId: !Ref StrapiFileSystemId
       PosixUser:
         Uid: '1000'
@@ -296,6 +423,4 @@ Resources:
       LaunchType: EC2
       TaskDefinition: !Ref ECSTaskDefinition
       LoadBalancers:
-        - TargetGroupArn: !Ref AeroTargetGroupName
-          ContainerPort: 80
-          ContainerName: Strapi-app
+        -      LoadBalancer: !Ref StrapiALB
