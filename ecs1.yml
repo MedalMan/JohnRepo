@@ -39,13 +39,12 @@ Parameters:
     Description: An Access Point for the DB.
   ECSLogGroup:
     Type: AWS::Logs::LogGroup
-    Description: Log Group 
+    Description: Log Group
 Resources:
   ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:
       ClusterName: !Ref ECSClusterName
-      !GetAtt Clustername.arn
   EcsSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -59,13 +58,11 @@ Resources:
       FromPort: 1337
       ToPort: 1337
       CidrIp: 0.0.0.0/0
-
   CloudwatchLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Ref ECSLogGroup
       RetentionInDays: 30
-
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -94,7 +91,6 @@ Resources:
           Value: 'US-Gov-West'
         - Name: NEXT_PUBLIC_STRAPI_API_URL
           Value: 'http://internal-lb-aero-wmd-apis-440038663.us-gov-west-1.elb.amazonaws.com:1337'
-
   ECSService:
     Type: AWS::ECS::Service
     Properties:
@@ -102,13 +98,11 @@ Resources:
       DesiredCount: !Ref DesiredCount
       LaunchType: EC2
       TaskDefinition: !Ref ECSTaskDefinition
-
   LogConfiguration:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub 'ecs-ec2-task-definition-${AWS::StackName}-backend'
       RetentionInDays: 30
-
   PortMappings:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -116,7 +110,6 @@ Resources:
         - Name: backend
           PortMappings:
             - ContainerPort: 1337
-
   HealthCheck:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -129,7 +122,6 @@ Resources:
               - '--fail'
               - 'http://localhost:1337/_health'
             Interval: 300
-
   StrapiEnvironment:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -140,7 +132,6 @@ Resources:
               Value: 'US-Gov-West'
             - Name: AWS_SDK_LOAD_CONFIG
               Value: 'load config from ~/.aws'
-
   StrapiValue:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -151,7 +142,6 @@ Resources:
               Value: 'US-Gov-West'
             - Name: AWS_SDK_LOAD_CONFIG
               Value: '1'
-
   ProxySettings:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -164,7 +154,6 @@ Resources:
               Value: 'true'
             - Name: URL
               Value: 'arn:aws-us-gov:elasticloadbalancing:us-gov-west-1:306251499781:loadbalancer/app/lb-aero-hive/8070d708261454aa'
-
   SecretsAdminJwt:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -173,7 +162,6 @@ Resources:
           Secrets:
             - Name: ADMIN_JWT_SECRET
               ValueFrom: tobemodified
-
   SecretsApiTokenSalt:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -182,7 +170,6 @@ Resources:
           Secrets:
             - Name: API_TOKEN_SALT
               ValueFrom: tobemodified
-
   SecretsAppKeys:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -193,13 +180,11 @@ Resources:
               ValueFrom:
                 - toBeModified1
                 - toBeModified2
-
   LogConfigurationBackend:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub 'ecs-ec2-task-definition-${AWS::StackName}-backend'
       RetentionInDays: 30
-
   ECSService:
     Type: AWS::ECS::Service
     Properties:
@@ -210,7 +195,6 @@ Resources:
       TaskDefinition: !Ref ECSTaskDefinition
       LoadBalancers:
         - LoadBalancer: !Ref StrapiALB
-
   MyRepository:
     Type: AWS::ECR::Repository
     Properties:
@@ -251,14 +235,12 @@ Resources:
               CountNumber: 1
             Action:
               Type: expire
-
   MyRepositoryConfig:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: !Ref AeroECRRepo
       ImageScanningConfiguration:
         scanOnPush: false
-
   MyLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
@@ -272,7 +254,6 @@ Resources:
       Tags:
         - Key: Name
           Value: MyLoadBalancer
-
   BackendTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -284,7 +265,6 @@ Resources:
       HealthCheckPath: /_health
       TargetType: ip
       Targets: []
-
   FrontendTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -296,7 +276,6 @@ Resources:
       HealthCheckPath: /_health
       TargetType: ip
       Targets: []
-
   BackendListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
@@ -310,7 +289,6 @@ Resources:
       Actions:
         - Type: forward
           TargetGroupArn: !Ref StrapiFrontEndTG
-
   FrontendListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
@@ -324,7 +302,6 @@ Resources:
       Actions:
         - Type: forward
           TargetGroupArn: !Ref StrapiFrontEndTG
-
   ALBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -340,7 +317,6 @@ Resources:
           FromPort: 3000
           ToPort: 3000
           CidrIp: 0.0.0.0/0
-
   BackendSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -352,7 +328,6 @@ Resources:
           FromPort: 1337
           ToPort: 1337
           CidrIp: 0.0.0.0/0
-
   MountTargetVPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -360,19 +335,16 @@ Resources:
       Tags:
         - Key: Name
           Value: MountTargetVPC
-
   MountTargetSubnetOne:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VpcId
       AvailabilityZone: us-gov-west-1a
-
   MountTargetSubnetTwo:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VpcId
       AvailabilityZone: us-gov-west-1b
-
   FileSystemResource:
     Type: AWS::EFS::FileSystem
     Properties:
@@ -383,7 +355,6 @@ Resources:
       BackupPolicy:
         Status: ENABLED
       Encrypted: true
-
   Policy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -400,7 +371,6 @@ Resources:
             Condition:
               Bool:
                 'aws:SecureTransport': 'false'
-
   AccessPointMedia:
     Type: AWS::EFS::AccessPoint
     Properties:
@@ -409,7 +379,6 @@ Resources:
       PosixUser:
         Uid: '1000'
         Gid: '1000'
-
   AccessPointDB:
     Type: AWS::EFS::AccessPoint
     Properties:
