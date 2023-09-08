@@ -34,23 +34,24 @@ Parameters:
   StrapiMediaAccessPoint:
     Type: AWS::EFS::AccessPoint::Id
     Description: An Access Point for the Media.
-  StrapidbAccessPoint:
+  StrapiDBAccessPoint:
     Type: AWS::EFS::AccessPoint::Id
     Description: An Access Point for the DB.
-
+  ECSLogGroup:
+    Type: AWS::Logs::LogGroup
+    Description: Log Group 
 Resources:
   ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:
       ClusterName: !Ref ECSClusterName
-
+      !GetAtt Clustername.arn
   EcsSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       VpcId: !Ref VpcId
       GroupName: 'ECS Security Group'
       Description: Security group for ECS instances
-
   EcsSecurityGroupALBports:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -412,7 +413,7 @@ Resources:
   AccessPointDB:
     Type: AWS::EFS::AccessPoint
     Properties:
-      AccessPointId: !Ref StrapidbAccessPoint
+      AccessPointId: !Ref StrapiDBAccessPoint
       FileSystemId: !Ref StrapiFileSystemId
       PosixUser:
         Uid: '1000'
