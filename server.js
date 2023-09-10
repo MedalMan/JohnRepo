@@ -1,26 +1,27 @@
+import json
+from botocore.vendored import requests
 
-const express = require("express");
 
-const app = express();
+def lambda_handler(event, context):
+    urls = ["https://enterprise.lmaero.us.lmco.com/qmd/dspSearchResults.cfm"]
+    print(urls)
+    for url in urls:
+        
+        try:
+            response = requests.get(url)
+            print(response)
+            if response.status_code != 200:
+                message = f"Site {url} returned {response.status_code} status code"
+                print('ok')
+                print(message)
+                
 
-//define port
-const port=8080;
-
-app.get("/", (req, res) => {
-
-res.json({message:'Root page'})
-
-})
-
-//get example
-
-app.get("/get-data", (req, res) => {
-
-res.json({message:'Get JSON Example'})
-
-})
-
-//run the application
-app.listen(port, () => {
-  console.log(`running at port ${port}`);
-});
+        except Exception as e:
+            message = f"Error checking {url}: {str(e)}"
+            
+            print(message)
+    
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Monitoring completed.')
+    }
