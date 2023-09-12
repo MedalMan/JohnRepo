@@ -7,13 +7,13 @@ def lambda_handler(event, context):
     for url in urls:
         try:
             response = requests.request("GET", url)
+            response.raise_for_status()  # Raise an exception for HTTP errors (non-200 status codes)
             print(response)
-            if response.status_code != 200:
-                message = f"Site {url} returned {response.status_code} status code"
-                print('ok')
-                print(message)
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
             message = f"Error checking {url}: {str(e)}"
+            print(message)
+        except Exception as e:
+            message = f"Unexpected error for {url}: {str(e)}"
             print(message)
 
     return {
