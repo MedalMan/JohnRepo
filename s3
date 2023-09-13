@@ -1,2 +1,54 @@
-ROLLBACK_IN_PROGRESS
-Parameter validation failed: parameter type AWS::EFS::AccessPoint::Id for parameter name StrapiMediaAccessPoint does not exist, parameter type AWS::Logs::LogGroup for parameter name ECSLogGroup does not exist, parameter type AWS::EFS::FileSystem::Id for parameter name StrapiFileSystemId does not exist, parameter type AWS::ElasticLoadBalancingV2::TargetGroup for parameter name StrapiBackEndTG does not exist, parameter type AWS::ElasticLoadBalancingV2::LoadBalancer::Name for parameter name StrapiALB does not exist, parameter type AWS::ECR::Repository::Name for parameter name AeroECRRepo does not exist, parameter type AWS::ElasticLoadBalancingV2::TargetGroup for parameter name StrapiFrontEndTG does not exist, parameter type AWS::EFS::AccessPoint::Id for parameter name StrapiDBAccessPoint does not exist. Rollback requested by user.
+const axios = require('axios');
+
+exports.handler = async (event, context) => {
+  // Define an array of websites to monitor
+  const websites = [
+    'https://example.com',
+    'https://google.com',
+    'https://amazon.com',
+  ];
+
+  try {
+    const results = await Promise.all(
+      websites.map(async (website) => {
+        try {
+          const response = await axios.get(website);
+
+          // Check if the response status code is 200 (OK)
+          if (response.status === 200) {
+            return {
+              website,
+              status: 'OK',
+            };
+          } else {
+            return {
+              website,
+              status: `HTTP ${response.status}`,
+            };
+          }
+        } catch (error) {
+          return {
+            website,
+            status: 'Error',
+            error: error.message,
+          };
+        }
+      })
+    );
+
+    // Log the results
+    console.log('Monitoring results:', results);
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ message: 'Website monitoring completed', results }),
+    };
+  } catch (error) {
+    console.error('Error:', error);
+
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ message: 'Error monitoring websites', error: error.message }),
+    };
+  }
+};
