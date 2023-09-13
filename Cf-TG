@@ -1,91 +1,81 @@
-"EcsElasticLoadBalancer" : {
-  "Type" : "AWS::ElasticLoadBalancingV2::LoadBalancer",
-  "Properties" : {
-    "Subnets" : { "Ref" : "ELBSubnets" },
-    "SecurityGroups": [
-      { "Ref": "ELBAccessSecurityGroup" }
-    ]
-  }
-},
-"LoadBalancerListener": {
-  "Type": "AWS::ElasticLoadBalancingV2::Listener",
-  "Properties": {
-    "DefaultActions": [{
-      "Type": "forward",
-      "TargetGroupArn": { "Ref": "TargetGroup" }
-    }],
-    "LoadBalancerArn": { "Ref": "EcsElasticLoadBalancer" },
-    "Port": 80,
-    "Protocol": "HTTP"
-  }
-},
-"TargetGroup": {
-  "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
-  "Properties": {
-    "Name": { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, "TargetGroup" ] ] },
-    "Port": 80,
-    "Protocol": "HTTP",
-    "VpcId": { "Ref": "VpcId" }
-  },
-  "DependsOn": [ "EcsElasticLoadBalancer" ]
-},
-"service": {
-  "Type": "AWS::ECS::Service",
-  "DependsOn": [ "LoadBalancerListener" ],
-  "Properties" : {
-    "Cluster": { "Ref": "ECSCluster" },
-    "DesiredCount": "1",
-    "LoadBalancers": [
-      {
-        "ContainerName": "main-app",
-        "ContainerPort": 3000,
-        "TargetGroupArn": { "Ref": "TargetGroup" }
-      }
-    ],
-    "Role" : {"Ref":"ECSServiceRole"},
-    "TaskDefinition" : {"Ref":"taskdefinition"}
-  }
-},
-"ECSServiceRole": {
-  "Type": "AWS::IAM::Role",
-  "Properties": {
-    "AssumeRolePolicyDocument": {
-      "Statement": [
-        {
-          "Effect": "Allow",
-          "Principal": {
-            "Service": [
-              "ecs.amazonaws.com"
-            ]
-          },
-          "Action": [
-            "sts:AssumeRole"
-          ]
-        }
-      ]
-    },
-    "Path": "/",
-    "Policies": [
-      {
-        "PolicyName": "ecs-service",
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                "elasticloadbalancing:Describe*",
-                "elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
-                "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
-                "ec2:Describe*",
-                "ec2:AuthorizeSecurityGroupIngress",
-                "elasticloadbalancing:DeregisterTargets",
-                "elasticloadbalancing:RegisterTargets"
-              ],
-              "Resource": "*"
-            }
-          ]
-        }
-      }
-    ]
-  }
-}
+EcsElasticLoadBalancer:
+  Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+  Properties:
+    Subnets:
+      Ref: ELBSubnets
+    SecurityGroups:
+      - Ref: ELBAccessSecurityGroup
+
+LoadBalancerListener:
+  Type: AWS::ElasticLoadBalancingV2::Listener
+  Properties:
+    DefaultActions:
+      - Type: forward
+        TargetGroupArn:
+          Ref: TargetGroup
+    LoadBalancerArn:
+      Ref: EcsElasticLoadBalancer
+    Port: 80
+    Protocol: HTTP
+
+TargetGroup:
+  Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  Properties:
+    Name:
+      Fn::Join:
+        - "-"
+        - - Ref: AWS::StackName
+          - "TargetGroup"
+    Port: 80
+    Protocol: HTTP
+    VpcId:
+      Ref: VpcId
+  DependsOn:
+    - EcsElasticLoadBalancer
+
+service:
+  Type: AWS::ECS::Service
+  DependsOn:
+    - LoadBalancerListener
+  Properties:
+    Cluster:
+      Ref: ECSCluster
+    DesiredCount: 1
+    LoadBalancers:
+      -
+        ContainerName: main-app
+        ContainerPort: 3000
+        TargetGroupArn:
+          Ref: TargetGroup
+    Role:
+      Ref: ECSServiceRole
+    TaskDefinition:
+      Ref: taskdefinition
+
+ECSServiceRole:
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - ecs.amazonaws.com
+          Action:
+            - sts:AssumeRole
+    Path: /
+    Policies:
+      -
+        PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Action:
+                - elasticloadbalancing:Describe*
+                - elasticloadbalancing:DeregisterInstancesFromLoadBalancer
+                - elasticloadbalancing:RegisterInstancesWithLoadBalancer
+                - ec2:Describe*
+                - ec2:AuthorizeSecurityGroupIngress
+                - elasticloadbalancing:DeregisterTargets
+                - elasticloadbalancing:RegisterTargets
+              Resource: "*"
