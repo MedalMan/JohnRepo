@@ -1,0 +1,9 @@
+{
+  "errorType": "TypeError",
+  "errorMessage": "promise.json is not a function",
+  "trace": [
+    "TypeError: promise.json is not a function",
+    "    at Runtime.handler (file:///var/task/index.mjs:7:31)",
+    "    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)"
+  ]
+}
