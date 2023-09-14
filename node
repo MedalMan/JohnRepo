@@ -1,9 +1,55 @@
 {
-  "errorType": "TypeError",
-  "errorMessage": "promise.json is not a function",
-  "trace": [
-    "TypeError: promise.json is not a function",
-    "    at Runtime.handler (file:///var/task/index.mjs:7:31)",
-    "    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)"
-  ]
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid":"LambdaCertificateExpiryPolicy1",
+            "Effect": "Allow",
+            "Action": "logs:CreateLogGroup",
+            "Resource": "arn:aws:logs:us-gov-west-1:3062-5149-9781:*"
+        },
+        {
+            "Sid":"LambdaCertificateExpiryPolicy2",
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": [
+                "arn:aws:logs:us-west-1:3062-5149-9781:log-group:/aws/lambda/handle-expiring-certificates:*"
+            ]
+        },
+        {
+            "Sid":"LambdaCertificateExpiryPolicy3",
+            "Effect": "Allow",
+            "Action": [
+                "acm:DescribeCertificate",
+                "acm:GetCertificate",
+                "acm:ListCertificates",
+                "acm:ListTagsForCertificate"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid":"LambdaCertificateExpiryPolicy4",
+            "Effect": "Allow",
+            "Action": "SNS:Publish",
+            "Resource": "*"
+        },
+        {
+            "Sid":"LambdaCertificateExpiryPolicy5",
+            "Effect": "Allow",
+            "Action": [
+                "SecurityHub:BatchImportFindings",
+                "SecurityHub:BatchUpdateFindings",
+                "SecurityHub:DescribeHub"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "LambdaCertificateExpiryPolicy6",
+            "Effect": "Allow",
+            "Action": "cloudwatch:ListMetrics",
+            "Resource": "*"
+        }
+    ]
 }
