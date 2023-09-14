@@ -1,53 +1,74 @@
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "LambdaCertificateExpiryPolicy1",
-            "Effect": "Allow",
-            "Action": "logs:CreateLogGroup",
-            "Resource": "arn:aws-us-gov:logs:us-gov-west-1:306251499781:log-group:*"
-        },
-        {
-            "Sid": "LambdaCertificateExpiryPolicy2",
-            "Effect": "Allow",
-            "Action": [
-                "logs:CreateLogStream",
-                "logs:PutLogEvents"
-            ],
-            "Resource": "arn:aws-us-gov:logs:us-gov-west-1:306251499781:log-group:/aws/lambda/handle-expiring-certificates:*"
-        },
-        {
-            "Sid": "LambdaCertificateExpiryPolicy3",
-            "Effect": "Allow",
-            "Action": [
-                "acm:DescribeCertificate",
-                "acm:GetCertificate",
-                "acm:ListCertificates",
-                "acm:ListTagsForCertificate"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Sid": "LambdaCertificateExpiryPolicy4",
-            "Effect": "Allow",
-            "Action": "SNS:Publish",
-            "Resource": "*"
-        },
-        {
-            "Sid": "LambdaCertificateExpiryPolicy5",
-            "Effect": "Allow",
-            "Action": [
-                "SecurityHub:BatchImportFindings",
-                "SecurityHub:BatchUpdateFindings",
-                "SecurityHub:DescribeHub"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Sid": "LambdaCertificateExpiryPolicy6",
-            "Effect": "Allow",
-            "Action": "cloudwatch:ListMetrics",
-            "Resource": "*"
-        }
-    ]
+const AWS = require('aws-sdk');
+const sns = new AWS.SNS({ region: 'aws-gov-west-1' });
+const cloudwatchlogs = new AWS.CloudWatchLogs({ region: 'aws-gov-west-1' });
+
+// Define the CloudWatch Log Group and Stream for your certificate logs
+const logGroupName = '/aws/lambda/your-lambda-function-name';
+const logStreamName = 'your-log-stream-name';
+
+// Define the SNS Topic ARN for sending notifications
+const snsTopicArn = 'arn:aws-us-gov:sns:us-gov-west-1:306251499781:Certificate-Expiration-Topic:3739b9a1-6965-4893-9df1-77f425d7333b';
+
+// Function to fetch the latest log events from CloudWatch Logs
+async function fetchLatestLogEvents() {
+  const params = {
+    logGroupName: logGroupName,
+    logStreamName: logStreamName,
+    limit: 1,
+    startFromHead: true,
+  };
+
+  const response = await cloudwatchlogs.getLogEvents(params).promise();
+  if (response.events.length > 0) {
+    return response.events[0].message;
+  } else {
+    return null;
+  }
 }
+
+// Function to send a notification using SNS
+async function sendNotification(message) {
+  const params = {
+    Message: message,
+    TopicArn: snsTopicArn,
+  };
+
+  try {
+    const publishResponse = await sns.publish(params).promise();
+    console.log(`Notification sent: MessageId - ${publishResponse.MessageId}`);
+  } catch (error) {
+    console.error(`Error sending notification: ${error.message}`);
+  }
+}
+
+// Function to check certificate expiration based on log event content
+async function checkCertificateExpiration(logEvent) {
+  try {
+    // Parse the log event or use a regular expression to extract certificate info
+    const certificateInfo = /* Extract certificate info from logEvent */;
+
+    // Implement your certificate expiration check logic here
+    // For example, compare the expiration date with the current date
+
+    if (/* Your certificate expiration check logic */) {
+      await sendNotification('Certificate is about to expire!');
+    }
+  } catch (error) {
+    console.error(`Error checking certificate expiration: ${error.message}`);
+  }
+}
+
+// Main function to check certificate expiration periodically
+async function main() {
+  try {
+    const latestLogEvent = await fetchLatestLogEvents();
+    if (latestLogEvent) {
+      await checkCertificateExpiration(latestLogEvent);
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`);
+  }
+}
+
+// Run the certificate expiration check periodically
+setInterval(main, /* Specify your interval in milliseconds */);
