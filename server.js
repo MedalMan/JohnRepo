@@ -1,9 +1,1 @@
-{
-  "errorType": "ReferenceError",
-  "errorMessage": "exports is not defined in ES module scope",
-  "trace": [
-    "ReferenceError: exports is not defined in ES module scope",
-    "    at file:///var/task/index.mjs:3:1",
-    "    at ModuleJob.run (node:internal/modules/esm/module_job:194:25)"
-  ]
-}
+Partition "aws" is not valid for resource "arn:aws:logs:us-gov-west-1:306251499781:log-group:*".
