@@ -5,7 +5,7 @@
             "Sid": "LambdaCertificateExpiryPolicy1",
             "Effect": "Allow",
             "Action": "logs:CreateLogGroup",
-            "Resource": "arn:aws:logs:us-gov-west-1:306251499781:log-group:*"
+            "Resource": "arn:aws-us-gov:logs:us-gov-west-1:306251499781:log-group:*"
         },
         {
             "Sid": "LambdaCertificateExpiryPolicy2",
@@ -14,7 +14,7 @@
                 "logs:CreateLogStream",
                 "logs:PutLogEvents"
             ],
-            "Resource": "arn:aws:logs:us-west-1:306251499781:log-group:/aws/lambda/handle-expiring-certificates:*"
+            "Resource": "arn:aws-us-gov:logs:us-gov-west-1:306251499781:log-group:/aws/lambda/handle-expiring-certificates:*"
         },
         {
             "Sid": "LambdaCertificateExpiryPolicy3",
