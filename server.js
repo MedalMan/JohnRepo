@@ -1,19 +1,19 @@
 const AWS = require('aws-sdk');
-const sns = new AWS.SNS({ region: 'your-aws-region' });
-const cloudwatchlogs = new AWS.CloudWatchLogs({ region: 'your-aws-region' });
+const sns = new AWS.SNS({ region: 'aws-gov-west-1' });
+const cloudwatchlogs = new AWS.CloudWatchLogs({ region: 'aws-gov-west-1' });
 
 // Define the CloudWatch Log Group and Stream for your certificate logs
 const logGroupName = '/aws/lambda/your-lambda-function-name';
 const logStreamName = 'your-log-stream-name';
 
 // Define the SNS Topic ARN for sending notifications
-const snsTopicArn = 'your-sns-topic-arn';
+const snsTopicArn = 'arn:aws-us-gov:sns:us-gov-west-1:306251499781:Certificate-Expiration-Topic:3739b9a1-6965-4893-9df1-77f425d7333b';
 
 // Function to fetch the latest log events from CloudWatch Logs
 async function fetchLatestLogEvents() {
   const params = {
-    logGroupName: logGroupName,
-    logStreamName: logStreamName,
+    logGroupName: Certificate-Expiry-Loggroup,
+    logStreamName: Certificate_expiry_Logstream,
     limit: 1,
     startFromHead: true,
   };
