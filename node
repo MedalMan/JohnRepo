@@ -2,24 +2,22 @@
     "Version": "2012-10-17",
     "Statement": [
         {
-            "Sid":"LambdaCertificateExpiryPolicy1",
+            "Sid": "LambdaCertificateExpiryPolicy1",
             "Effect": "Allow",
             "Action": "logs:CreateLogGroup",
-            "Resource": "arn:aws:logs:us-gov-west-1:3062-5149-9781:*"
+            "Resource": "arn:aws:logs:us-gov-west-1:306251499781:log-group:*"
         },
         {
-            "Sid":"LambdaCertificateExpiryPolicy2",
+            "Sid": "LambdaCertificateExpiryPolicy2",
             "Effect": "Allow",
             "Action": [
                 "logs:CreateLogStream",
                 "logs:PutLogEvents"
             ],
-            "Resource": [
-                "arn:aws:logs:us-west-1:3062-5149-9781:log-group:/aws/lambda/handle-expiring-certificates:*"
-            ]
+            "Resource": "arn:aws:logs:us-west-1:306251499781:log-group:/aws/lambda/handle-expiring-certificates:*"
         },
         {
-            "Sid":"LambdaCertificateExpiryPolicy3",
+            "Sid": "LambdaCertificateExpiryPolicy3",
             "Effect": "Allow",
             "Action": [
                 "acm:DescribeCertificate",
@@ -30,13 +28,13 @@
             "Resource": "*"
         },
         {
-            "Sid":"LambdaCertificateExpiryPolicy4",
+            "Sid": "LambdaCertificateExpiryPolicy4",
             "Effect": "Allow",
             "Action": "SNS:Publish",
             "Resource": "*"
         },
         {
-            "Sid":"LambdaCertificateExpiryPolicy5",
+            "Sid": "LambdaCertificateExpiryPolicy5",
             "Effect": "Allow",
             "Action": [
                 "SecurityHub:BatchImportFindings",
