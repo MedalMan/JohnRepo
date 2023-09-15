@@ -1,14 +1,25 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: CloudFormation Template for Strapi with Application Load Balancer (ALB)
+Description: CloudFormation Template for Strapi with Application Load Balancer (ALB) and EFS
+
+Parameters:
+  VPCId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where resources will be created
+  Subnet1:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet ID for the first availability zone
+  Subnet2:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet ID for the second availability zone
 
 Resources:
   # Define the Application Load Balancer (ALB)
   StrapiALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Subnets: 
-        - !Ref Subnet1  # Replace with your subnet IDs
-        - !Ref Subnet2  # Replace with your subnet IDs
+      Subnets:
+        - !Ref Subnet1
+        - !Ref Subnet2
       SecurityGroups:
         - !Ref ALBSecurityGroup
       Scheme: internet-facing
@@ -24,54 +35,48 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       Name: StrapiFrontEndTG
-      Port: 80  # Adjust the port as needed
+      Port: 80
       Protocol: HTTP
-      VpcId: !Ref VPCId  # Replace with your VPC ID
+      VpcId: !Ref VPCId
       HealthCheckProtocol: HTTP
       HealthCheckPath: /  # Adjust the path as needed
       TargetType: ip
-      Targets: []  # Add your targets here
+      Targets: []
 
   # Define the backend target group
   StrapiBackEndTG:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       Name: StrapiBackEndTG
-      Port: 1337  # Adjust the port as needed
+      Port: 1337
       Protocol: HTTP
-      VpcId: !Ref VPCId  # Replace with your VPC ID
+      VpcId: !Ref VPCId
       HealthCheckProtocol: HTTP
       HealthCheckPath: /_health  # Adjust the path as needed
       TargetType: ip
-      Targets: []  # Add your targets here
+      Targets: []
 
-  # Define the backend listener rule
-  BackendListenerRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+  # Define the backend listener
+  BackendListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
-      ListenerArn: !Ref BackendListener
-      Priority: 1
-      Conditions:
-        - Field: path-pattern
-          Values:
-            - /backend*  # Adjust the path pattern as needed
-      Actions:
+      DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref StrapiBackEndTG
+      LoadBalancerArn: !Ref StrapiALB
+      Port: 1337
+      Protocol: HTTP
 
-  # Define the frontend listener rule
-  FrontendListenerRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+  # Define the frontend listener
+  FrontendListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
-      ListenerArn: !Ref FrontendListener
-      Priority: 2
-      Conditions:
-        - Field: path-pattern
-          Values:
-            - /frontend*  # Adjust the path pattern as needed
-      Actions:
+      DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref StrapiFrontEndTG
+      LoadBalancerArn: !Ref StrapiALB
+      Port: 80
+      Protocol: HTTP
 
   # Define the ALB security group
   ALBSecurityGroup:
@@ -79,12 +84,63 @@ Resources:
     Properties:
       GroupName: ALBSecurityGroup
       Description: ALB Security Group
-      VpcId: !Ref VPCId  # Replace with your VPC ID
+      VpcId: !Ref VPCId
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 80  # Adjust ports as needed
+          FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0  # Adjust IP range as needed
+
+  # Define the EFS file system
+  StrapiEFS:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      PerformanceMode: generalPurpose
+      Encrypted: true
+      LifecyclePolicies:
+        - TransitionToIA: AFTER_14_DAYS
+      Tags:
+        - Key: Name
+          Value: StrapiEFS
+
+  # Define mount targets for EFS in both subnets
+  EFSMountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref StrapiEFS
+      SubnetId: !Ref Subnet1
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+
+  EFSMountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref StrapiEFS
+      SubnetId: !Ref Subnet2
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+
+  # Define EFS Access Point for Media
+  StrapiMediaAccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref StrapiEFS
+      PosixUser:
+        Uid: '1001'
+        Gid: '1001'
+      RootDirectory:
+        Path: /media
+
+  # Define EFS Access Point for DB
+  StrapiDBAccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref StrapiEFS
+      PosixUser:
+        Uid: '1001'
+        Gid: '1001'
+      RootDirectory:
+        Path: /db
 
 Outputs:
   ALBURL:
