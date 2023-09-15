@@ -1,199 +1,227 @@
-import json
-import boto3
-import os
-from datetime import datetime, timedelta, timezone
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
+  ECSClusterName:
+    Type: AWS::ECS::Cluster
+    Description: Name of the Cluster
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: A VPC that allows instances to access the Internet.
+  ECSTaskDefinition:
+    Type: String
+    Description: Task Definition name
+  DesiredCount:
+    Type: Number
+    Default: 1
+    Description: Number of instances to launch in the ECS cluster.
+  StrapiFrontEndTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Description: Front End Target Group.
+  StrapiBackEndTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Description: Back End Target Group.
+  StrapiFileSystem:
+    Type: List<AWS::EFS::FileSystem::Id>
+    Description: Select from a list of existing File Systems.
+  AeroECRRepo:
+    Type: AWS::ECR::Repository::Name
+    Description: An ECR Repository where Docker images are pushed into.
+  StrapiALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer::Name
+    Description: Select from a list of existing AWS Load Balancers.
+  StrapiMediaAccessPoint:
+    Type: AWS::EFS::AccessPoint::Id
+    Description: An Access Point for the Media.
+  StrapiDBAccessPoint:
+    Type: AWS::EFS::AccessPoint::Id
+    Description: An Access Point for the DB.
 
-# -------------------------------------------
-# setup global data
-# -------------------------------------------
-utc = timezone.utc
+Resources:
+  ECSCluster:
+    Type: 'AWS::ECS::Cluster'
+    Properties:
+      ClusterName: !Ref ECSClusterName
+      CapacityProviders:
+        - EC2
+      Configuration:
+        ExecuteCommandConfiguration:
+          Logging: DEFAULT
+      Tags:
+        - Key: environment
+          Value: production
 
-# make today timezone aware
-today = datetime.now().replace(tzinfo=utc)
+  EcsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http to client host
+      VpcId: !Ref VpcId
+      GroupName: 'ECS Security Group'
+      Description: Security group for ECS instances
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 1337
+          ToPort: 1337
+          CidrIp: 0.0.0.0/0
 
-# set up time window for alert - default to 45 if its missing
-if os.environ.get('EXPIRY_DAYS') is None:
-    expiry_days = 45
-else:
-    expiry_days = int(os.environ['EXPIRY_DAYS'])
+  ECSTaskDefinition:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Name: frontend
+          Command:
+            - Name: frontend
+          Essential: true
+          Memory: 512
+          Image: '306251499781.dkr.ecr.us-gov-west-1.amazonaws.com/aero-strapi-ecr-imagerepo'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/ec2-task-definition
+              awslogs-region: us-gov-west-1
+              awslogs-stream-prefix: ecs
+          PortMappings:
+            - ContainerPort: 3000
+              HostPort: 3000
+              Protocol: tcp
+      Cpu: 256
+      ExecutionRoleArn: 'arn:aws:iam::306251499781:role/ecsTaskExecutionRole'
+      Family: STRAPI
+      Memory: 512
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - EC2
+      RuntimePlatform:
+        OperatingSystemFamily: LINUX
+      HealthCheck:
+        Command: CMD-SHELL, curl -f http://localhost/ || exit 1
+        Interval: 200
+      Environment:
+        - Name: AWS_REGION
+          Value: 'US-Gov-West'
+        - Name: NEXT_PUBLIC_STRAPI_API_URL
+          Value: 'http://internal-lb-aero-wmd-apis-440038663.us-gov-west-1.elb.amazonaws.com:1337'
 
-expiry_window = today + timedelta(days = expiry_days)
+  ECSService:
+    Type: 'AWS::ECS::Service'
+    Properties:
+      Cluster: !Ref ECSClusterName
+      DesiredCount: 1
+      LaunchType: EC2
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets: [subnet-24cf0152, subnet-d526f0b1]
+      TaskDefinition: !Ref ECSTaskDefinition
 
-def lambda_handler(event, context):
+  StrapiEnvironment:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Environment:
+            - Name: AWS_REGION
+              Value: 'US-Gov-West'
+            - Name: AWS_SDK_LOAD_CONFIG
+              Value: 'load config from ~/.aws'
 
-    # if this is coming from the ACM event, its for a single certificate
-    if (event['detail-type'] == "ACM Certificate Approaching Expiration"):
-        response = handle_single_cert (event, context.invoked_function_arn)
+  StrapiValue:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Environment:
+            - Name: AWS_REGION
+              Value: 'US-Gov-West'
+            - Name: AWS_SDK_LOAD_CONFIG
+              Value: '1'
 
-    # otherwise, we need to get all the expiring certs that are expiring from CloudWatch Metrics
-    else:
-        response = handle_multiple_certs(event, context.invoked_function_arn)
-    
-    return {
-        'statusCode': 200,
-        'body': response 
-    }
+  ProxySettings:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Environment:
+            - Name: PROXY
+              Value: 'true'
+            - Name: STRAPI_TELEMETRY_DISABLED
+              Value: 'true'
+            - Name: URL
+              Value: 'arn:aws-us-gov:elasticloadbalancing:us-gov-west-1:306251499781:loadbalancer/app/lb-aero-hive/8070d708261454aa'
 
+  SecretsAdminJwt:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Secrets:
+            - Name: ADMIN_JWT_SECRET
+              ValueFrom: tobemodified
 
-def handle_single_cert(event, context_arn):
-    cert_client = boto3.client('acm')
+  SecretsApiTokenSalt:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Secrets:
+            - Name: API_TOKEN_SALT
+              ValueFrom: tobemodified
 
-    cert_details = cert_client.describe_certificate(CertificateArn=event['resources'][0])
+  SecretsAppKeys:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Secrets:
+            - Name: APP_KEYS
+              ValueFrom:
+                - toBeModified1
+                - toBeModified2
 
-    result = 'The following certificate is expiring within ' + str(expiry_days) + ' days: ' + cert_details['Certificate']['DomainName']
-    
-    # check the expiry window before logging to Security Hub and sending an SNS
-    if cert_details['Certificate']['NotAfter'] < expiry_window:
-        # This call is the text going into the SNS notification
-        result = result + ' (' + cert_details['Certificate']['CertificateArn'] + ') '
+  MyRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref AeroECRRepo
+      RepositoryPolicyText:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowPushPull
+            Effect: Allow
+            Principal:
+              AWS: '*'
+            Action:
+              - "ecr:GetDownloadUrlForLayer"
+              - "ecr:BatchGetImage"
+              - "ecr:BatchCheckLayerAvailability"
+              - "ecr:PutImage"
+              - "ecr:InitiateLayerUpload"
+              - "ecr:UploadLayerPart"
+              - "ecr:CompleteLayerUpload"
 
-        # this call is publishing to SH
-        result = result + ' - ' + log_finding_to_sh(event, cert_details, context_arn)
-        
-        # if there's an SNS topic, publish a notification to it
-        if os.environ.get('SNS_TOPIC_ARN') is None:
-            response = result
-        else:
-            sns_client = boto3.client('sns')
-            response = sns_client.publish(TopicArn=os.environ['SNS_TOPIC_ARN'], Message=result, Subject='Certificate Expiration Notification')
-        
-    return result
+      LifecyclePolicy:
+        Rules:
+          - RulePriority: 1
+            Description: Rule 1
+            Selection:
+              TagStatus: tagged
+              TagPrefixList:
+                - prod
+              CountType: imageCountMoreThan
+              CountNumber: 1
+            Action:
+              Type: expire
+          - RulePriority: 2
+            Selection:
+              TagStatus: tagged
+              TagPrefixList:
+                - beta
+              CountType: imageCountMoreThan
+              CountNumber: 1
+            Action:
+              Type: expire
 
-def handle_multiple_certs(event, context_arn):
-    cert_client = boto3.client('acm')
-
-    cert_list = json.loads(get_expiring_cert_arns())
-    
-    if cert_list is None:
-        response = 'No certificates are expiring within ' + str(expiry_days) + ' days.'
-
-    else:
-        response = 'The following certificates are expiring within ' + str(expiry_days) + ' days: \n'
-
-        # loop through the cert list and pull out certs that are expiring within the expiry window
-        for csl in cert_list:
-            cert_arn = json.dumps(csl['Dimensions'][0]['Value']).replace('\"', '')
-            cert_details = cert_client.describe_certificate(CertificateArn=cert_arn)
-
-            if cert_details['Certificate']['NotAfter'] < expiry_window:
-                current_cert = 'Domain:' + cert_details['Certificate']['DomainName'] + ' (' + cert_details['Certificate']['CertificateArn'] + '), \n'
-                print(current_cert)
-
-                # this is publishing to SH
-                result = log_finding_to_sh(event, cert_details, context_arn)
-
-                # This is the text going into the SNS notification
-                response = response + current_cert
-                
-    # if there's an SNS topic, publish a notification to it
-    if os.environ.get('SNS_TOPIC_ARN') is not None:
-        sns_client = boto3.client('sns')
-        response = sns_client.publish(TopicArn=os.environ['SNS_TOPIC_ARN'], Message=response.rstrip(', \n'), Subject='Certificate Expiration Notification')
-
-    return response
-
-def log_finding_to_sh(event, cert_details, context_arn):
-    # setup for security hub
-    sh_region = get_sh_region(event['region'])
-    sh_hub_arn = "arn:aws:securityhub:{0}:{1}:hub/default".format(sh_region, event['account'])
-    sh_product_arn = "arn:aws:securityhub:{0}:{1}:product/{1}/default".format(sh_region, event['account'])
-
-    # check if security hub is enabled, and if the hub arn exists
-    sh_client = boto3.client('securityhub', region_name = sh_region)
-    try:
-        sh_enabled = sh_client.describe_hub(HubArn = sh_hub_arn)
-
-    # the previous command throws an error indicating the hub doesn't exist or lambda doesn't have rights to it so we'll stop attempting to use it
-    except Exception as error:
-        sh_enabled = None
-        print ('Default Security Hub product doesn\'t exist')
-        response = 'Security Hub disabled'
-    
-    # This is used to generate the URL to the cert in the Security Hub Findings to link directly to it
-    cert_id = right(cert_details['Certificate']['CertificateArn'], 36)
-
-    if sh_enabled:
-        # set up a new findings list
-        new_findings = []
-    
-            # add expiring certificate to the new findings list
-        new_findings.append({
-            "SchemaVersion": "2018-10-08",
-            "Id": cert_id,
-            "ProductArn": sh_product_arn,
-            "GeneratorId": context_arn,
-            "AwsAccountId": event['account'],
-            "Types": [
-                "Software and Configuration Checks/AWS Config Analysis"
-            ],
-            "CreatedAt": event['time'],
-            "UpdatedAt": event['time'],
-            "Severity": {
-                "Original": '89.0',
-                "Label": 'HIGH'
-            },
-            "Title": 'Certificate expiration',
-            "Description": 'cert expiry',
-            'Remediation': {
-                'Recommendation': {
-                    'Text': 'A new certificate for ' + cert_details['Certificate']['DomainName'] + ' should be imported to replace the existing imported certificate before expiration',
-                    'Url': "https://console.aws.amazon.com/acm/home?region=" + event['region'] + "#/?id=" + cert_id
-                }
-            },
-            'Resources': [
-                {
-                    'Id': event['id'],
-                    'Type': 'ACM Certificate',
-                    'Partition': 'aws',
-                    'Region': event['region']
-                }
-            ],
-            'Compliance': {'Status': 'WARNING'}
-        })
-    
-        # push any new findings to security hub
-        if new_findings:
-            try:
-                response = sh_client.batch_import_findings(Findings=new_findings)
-    
-                if response['FailedCount'] > 0:
-                    print("Failed to import {} findings".format(response['FailedCount']))
-    
-            except Exception as error:
-                print("Error: ", error)
-                raise
-            
-    return json.dumps(response)
-
-def get_expiring_cert_arns():
-    cert_list = []
-    
-    # Create CloudWatch client
-    cloudwatch = boto3.client('cloudwatch')
-    
-    paginator = cloudwatch.get_paginator('list_metrics')
-    
-    for response in paginator.paginate(
-        MetricName='DaysToExpiry',
-        Namespace='AWS/CertificateManager',
-        Dimensions=[{'Name': 'CertificateArn'}],):
-            cert_list = cert_list + (response['Metrics'])
-            
-    # return all certs that are expiring according to CW
-    return json.dumps(cert_list)
-
-# function to setup the sh region    
-def get_sh_region(event_region):
-    # security hub findings may need to go to a different region so set that here
-    if os.environ.get('SECURITY_HUB_REGION') is None:
-        sh_region_local = event_region
-    else:
-        sh_region_local = os.environ['SECURITY_HUB_REGION']
-    
-    return sh_region_local
-    
-# quick function to trim off right side of a string
-def right(value, count):
-    # To get right part of string, use negative first index in slice.
-    return value[-count:] 
-
+Outputs:
+  ALBURL:
+    Description: URL of the Application Load Balancer
+    Value: !GetAtt StrapiALB.DNSName
