@@ -1,25 +1,33 @@
-  24: from C:/HashiCorp/Vagrant/embedded/gems/2.2.18/gems/vagrant-2.2.18/bin/vagrant:194:in `<main>'
-        23: from C:/HashiCorp/Vagrant/embedded/gems/2.2.18/gems/vagrant-2.2.18/bin/vagrant:194:in `new'
-        22: from C:/HashiCorp/Vagrant/embedded/gems/2.2.18/gems/vagrant-2.2.18/lib/vagrant/environment.rb:178:in `initialize'
-        21: from C:/HashiCorp/Vagrant/embedded/gems/2.2.18/gems/vagrant-2.2.18/lib/vagrant/environment.rb:1005:in `process_configured_plugins'
-        20: from C:/HashiCorp/Vagrant/embedded/gems/2.2.18/gems/vagrant-2.2.18/lib/vagrant/environment.rb:1005:in `each'
-        19: from C:/HashiCorp/Vagrant/embedded/gems/2.2.18/gems/vagrant-2.2.18/lib/vagrant/environment.rb:1014:in `block in process_configured_plugins'
-        18: from C:/HashiCorp/Vagrant/embedded/gems/2.2.18/gems/vagrant-2.2.18/lib/vagrant/plugin/manager.rb:148:in `install_plugin'
-        17: from C:/HashiCorp/Vagrant/embedded/gems/2.2.18/gems/vagrant-2.2.18/lib/vagrant/plugin/manager.rb:138:in `block in install_plugin'
-        16: from C:/HashiCorp/Vagrant/embedded/gems/2.2.18/gems/vagrant-2.2.18/lib/vagrant/bundler.rb:350:in `install'
-        15: from C:/HashiCorp/Vagrant/embedded/gems/2.2.18/gems/vagrant-2.2.18/lib/vagrant/bundler.rb:561:in `internal_install'
-        14: from C:/HashiCorp/Vagrant/embedded/gems/2.2.18/gems/vagrant-2.2.18/lib/vagrant/bundler.rb:688:in `validate_configured_sources!'
-        13: from C:/HashiCorp/Vagrant/embedded/mingw64/lib/ruby/2.7.0/rubygems/source_list.rb:100:in `each_source'
-        12: from C:/HashiCorp/Vagrant/embedded/mingw64/lib/ruby/2.7.0/rubygems/source_list.rb:100:in `each'
-        11: from C:/HashiCorp/Vagrant/embedded/gems/2.2.18/gems/vagrant-2.2.18/lib/vagrant/bundler.rb:690:in `block in validate_configured_sources!'
-        10: from C:/HashiCorp/Vagrant/embedded/mingw64/lib/ruby/2.7.0/rubygems/source.rb:186:in `load_specs'
-         9: from C:/HashiCorp/Vagrant/embedded/mingw64/lib/ruby/2.7.0/rubygems/remote_fetcher.rb:299:in `cache_update_path'
-         8: from C:/HashiCorp/Vagrant/embedded/mingw64/lib/ruby/2.7.0/rubygems/remote_fetcher.rb:256:in `fetch_path'
-         7: from C:/HashiCorp/Vagrant/embedded/mingw64/lib/ruby/2.7.0/rubygems/remote_fetcher.rb:217:in `fetch_http'
-         6: from C:/HashiCorp/Vagrant/embedded/mingw64/lib/ruby/2.7.0/rubygems/remote_fetcher.rb:329:in `request'
-         5: from C:/HashiCorp/Vagrant/embedded/mingw64/lib/ruby/2.7.0/rubygems/remote_fetcher.rb:350:in `proxy_for'
-         4: from C:/HashiCorp/Vagrant/embedded/mingw64/lib/ruby/2.7.0/rubygems/request.rb:178:in `get_proxy_from_env'
-         3: from C:/HashiCorp/Vagrant/embedded/mingw64/lib/ruby/2.7.0/uri/common.rb:737:in `URI'
-         2: from C:/HashiCorp/Vagrant/embedded/mingw64/lib/ruby/2.7.0/uri/common.rb:234:in `parse'
-         1: from C:/HashiCorp/Vagrant/embedded/mingw64/lib/ruby/2.7.0/uri/rfc3986_parser.rb:73:in `parse'
-C:/HashiCorp/Vagrant/embedded/mingw64/lib/ruby/2.7.0/uri/rfc3986_parser.rb:67:in `split': bad URI(is not URI?): "http://proxy-zsgov.external.lmco.com:80\\\\" (URI::InvalidURIError)
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "cloudwatch:GetMetricStatistics",
+                "cloudwatch:ListMetrics"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::nagios-monitoring-bucket/*",
+                "arn:aws:s3:::nagios-monitoring-bucket"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource":"arn:aws:logs:us-aws-gov-west:130625149978:log-group:Nagios-Monitoring-Logs*"
+        }
+    ]
+}
