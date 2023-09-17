@@ -1,55 +1,33 @@
-#!/bin/bash
-
-# Update the system
-yum update -y
-
-# Install required packages
-yum install -y httpd php gcc glibc glibc-common perl wget openssl-devel net-snmp-utils unzip
-
-# Enable and start Apache web server
-systemctl enable httpd
-systemctl start httpd
-
-# Download and install Nagios Core
-cd /tmp
-wget https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.4.6.tar.gz
-tar xzf nagios-4.4.6.tar.gz
-cd nagios-4.4.6
-
-./configure --with-command-group=nagcmd
-make all
-make install
-make install-init
-make install-commandmode
-make install-config
-make install-webconf
-cp -R contrib/eventhandlers/ /usr/local/nagios/libexec/
-chown -R nagios:nagios /usr/local/nagios/libexec/eventhandlers
-
-# Create Nagios admin user
-htpasswd -c /usr/local/nagios/etc/htpasswd.users nagiosadmin
-
-# Enable Nagios to start on boot
-systemctl enable nagios
-systemctl start nagios
-
-# Install and configure Nagios Plugins
-cd /tmp
-wget https://nagios-plugins.org/download/nagios-plugins-2.3.3.tar.gz
-tar xzf nagios-plugins-2.3.3.tar.gz
-cd nagios-plugins-2.3.3
-
-./configure --with-nagios-user=nagios --with-nagios-group=nagios
-make
-make install
-
-# Open firewall ports for Nagios
-firewall-cmd --zone=public --add-port=80/tcp --permanent
-firewall-cmd --zone=public --add-port=5666/tcp --permanent
-firewall-cmd --reload
-
-# Clean up
-rm -rf /tmp/nagios*
-
-# Nagios installation complete!
-echo "Nagios has been successfully installed. Access the web interface at http://your-server-ip/nagios"
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "cloudwatch:GetMetricStatistics",
+                "cloudwatch:ListMetrics"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::<your-s3-bucket-name>/*",
+                "arn:aws:s3:::<your-s3-bucket-name>"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "arn:aws:logs:<your-region>:<your-account-id>:log-group:<your-log-group-name>:*"
+        }
+    ]
+}
