@@ -1,44 +1,376 @@
-What is Nagios?
-
-Nagios is an open-source monitoring and alerting system designed to keep an eye on the health and availability of your IT infrastructure components, services, and applications. It helps you proactively identify and respond to issues before they impact your organization's operations.
-
-How Does Nagios Work?
-
-Nagios operates on a client-server model, where the central Nagios server communicates with remote systems (clients or agents) to collect data and monitor services. Here's how it works:
-
-Nagios Server: This is the central control point of your monitoring system. It runs Nagios Core, which is the core monitoring engine. The server is responsible for:
-
-Scheduling and executing checks: Nagios server periodically runs checks based on defined service and host definitions. These checks can be simple pings, HTTP requests, database queries, or custom scripts.
-Storing historical data: Nagios retains historical performance data, which can be useful for trend analysis and reporting.
-Alerting: When a service or host check fails or meets a defined threshold, Nagios triggers alerts (notifications) to notify administrators or support teams.
-Nagios Plugins: These are executable scripts or binaries that perform the actual monitoring. Nagios plugins are installed on the Nagios server and/or remote clients. They run checks on hosts and services and return results (e.g., OK, Warning, Critical) to the Nagios server.
-
-Configuration: Nagios uses configuration files to define hosts, services, checks, notification settings, and more. Administrators create or modify these configuration files to customize their monitoring setup. Popular configuration tools like Nagios Core Configurator and NagiosQL simplify this process.
-
-Remote Clients/Agents: Nagios can monitor remote systems, even across distributed environments. Remote clients or agents run Nagios plugins and send results back to the Nagios server. These agents can be installed on various platforms, making Nagios highly versatile.
-
-Notification: When a check result changes (e.g., from OK to Critical), Nagios can notify administrators through various channels like email, SMS, or custom scripts. Notifications can be escalated based on defined time intervals or urgency.
-
-Benefits of Nagios:
-
-Proactive Monitoring: Nagios helps IT teams identify problems before they impact users, reducing downtime and maintaining service availability.
-
-Customizable: Administrators can define and monitor any aspect of their IT infrastructure, making Nagios adaptable to diverse environments.
-
-Scalability: Nagios can monitor a wide range of devices and services across distributed networks, making it suitable for small to large enterprises.
-
-Alerting and Notifications: Real-time alerts and notifications keep administrators informed about issues, enabling rapid response.
-
-Performance Data: Nagios stores historical data, facilitating performance analysis, trend tracking, and capacity planning.
-
-Third-Party Integrations: Nagios integrates with various third-party tools, enabling extensions and enhancing functionality.
-
-Open Source: Nagios is open-source and has a large, active community. This means no licensing costs and access to community-contributed plugins and support.
-
-Community and Enterprise Editions: Nagios offers both community (Nagios Core) and enterprise (Nagios XI) editions, providing options for different requirements and budgets.
-
-Centralized Monitoring: A single Nagios server can monitor multiple systems and services, streamlining monitoring management.
-
-Custom Scripts: Administrators can create custom checks and scripts to monitor unique services and applications.
-
-In conclusion, Nagios is a versatile, open-source monitoring solution that empowers IT teams to monitor, analyze, and manage their infrastructure effectively. Its proactive approach to monitoring, along with customization options, scalability, and extensive community support, makes it a valuable tool for maintaining IT service reliability and performance.
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
+  ECSClusterName:
+    Type: AWS::ECS::Cluster
+    Description: Name of the Cluster
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: A VPC that allows instances to access the Internet.
+  ECSTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Description: Task Definition name
+  DesiredCount:
+    Type: Number
+    Default: 1
+    Description: Number of instances to launch in the ECS cluster.
+  StrapiFrontEndTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Description: Front End Target Group.
+  StrapiBackEndTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Description: Back End Target Group.
+  StrapiFileSystem:
+    Type: AWS::EFS::FileSystem::Id
+    Description: Select from a list of existing File Systems.
+  AeroECRRepo:
+    Type: AWS::ECR::Repository::Name
+    Description: An ECR Repository where Docker images are pushed into.
+  StrapiALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer::Name
+    Description: Select from a list of existing AWS Load Balancers.
+  StrapiMediaAccessPoint:
+    Type: AWS::EFS::AccessPoint::Id
+    Description: An Access Point for the Media.
+  StrapiDBAccessPoint:
+    Type: AWS::EFS::AccessPoint::Id
+    Description: An Access Point for the DB.
+Resources:
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref ECSClusterName
+  EcsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupName: 'ECS Security Group'
+      Description: Security group for ECS instances
+  EcsSecurityGroupALBports:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      FromPort: 1337
+      ToPort: 1337
+      CidrIp: 0.0.0.0/0
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: strapi
+      Cpu: '256'
+      Memory: '512'
+      NetworkMode: awsvpc
+      ExecutionRoleArn: 'arn:aws:iam::306251499781:role/ecsTaskExecutionRole'
+      ContainerDefinitions:
+        - Name: frontend
+          Image: '306251499781.dkr.ecr.us-gov-west-1.amazonaws.com/aero-strapi-ecr-imagerepo'
+          Essential: true
+          Memory: 512
+          Cpu: 256
+          PortMappings:
+            - ContainerPort: 3000
+      HealthCheck:
+        Command:
+          - CMD
+          - curl
+          - --fail
+          - 'http://localhost:3000'
+        Interval: 300
+      Environment:
+        - Name: AWS_REGION
+          Value: 'US-Gov-West'
+        - Name: NEXT_PUBLIC_STRAPI_API_URL
+          Value: 'http://internal-lb-aero-wmd-apis-440038663.us-gov-west-1.elb.amazonaws.com:1337'
+  ECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref ECSClusterName
+      DesiredCount: !Ref DesiredCount
+      LaunchType: EC2
+      TaskDefinition: !Ref ECSTaskDefinition
+  LogConfiguration:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub 'ecs-ec2-task-definition-${AWS::StackName}-backend'
+      RetentionInDays: 30
+  PortMappings:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          PortMappings:
+            - ContainerPort: 1337
+  HealthCheck:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          HealthCheck:
+            Command:
+              - CMD
+              - curl
+              - '--fail'
+              - 'http://localhost:1337/_health'
+            Interval: 300
+  StrapiEnvironment:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Environment:
+            - Name: AWS_REGION
+              Value: 'US-Gov-West'
+            - Name: AWS_SDK_LOAD_CONFIG
+              Value: 'load config from ~/.aws'
+  StrapiValue:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Environment:
+            - Name: AWS_REGION
+              Value: 'US-Gov-West'
+            - Name: AWS_SDK_LOAD_CONFIG
+              Value: '1'
+  ProxySettings:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Environment:
+            - Name: PROXY
+              Value: 'true'
+            - Name: STRAPI_TELEMETRY_DISABLED
+              Value: 'true'
+            - Name: URL
+              Value: 'arn:aws-us-gov:elasticloadbalancing:us-gov-west-1:306251499781:loadbalancer/app/lb-aero-hive/8070d708261454aa'
+  SecretsAdminJwt:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Secrets:
+            - Name: ADMIN_JWT_SECRET
+              ValueFrom: tobemodified
+  SecretsApiTokenSalt:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Secrets:
+            - Name: API_TOKEN_SALT
+              ValueFrom: tobemodified
+  SecretsAppKeys:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: backend
+          Secrets:
+            - Name: APP_KEYS
+              ValueFrom:
+                - toBeModified1
+                - toBeModified2
+  LogConfigurationBackend:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub 'ecs-ec2-task-definition-${AWS::StackName}-backend'
+      RetentionInDays: 30
+  ECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref ECSClusterName
+      DesiredCount: 1
+      EnableExecuteCommand: true
+      LaunchType: EC2
+      TaskDefinition: !Ref ECSTaskDefinition
+      LoadBalancers:
+        - LoadBalancer: !Ref StrapiALB
+  MyRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref AeroECRRepo
+      RepositoryPolicyText:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowPushPull
+            Effect: Allow
+            Principal:
+              AWS: '*'
+            Action:
+              - 'ecr:GetDownloadUrlForLayer'
+              - 'ecr:BatchGetImage'
+              - 'ecr:BatchCheckLayerAvailability'
+              - 'ecr:PutImage'
+              - 'ecr:InitiateLayerUpload'
+              - 'ecr:UploadLayerPart'
+              - 'ecr:CompleteLayerUpload'
+      LifecyclePolicy:
+        Rules:
+          - RulePriority: 1
+            Description: Rule 1
+            Selection:
+              TagStatus: tagged
+              TagPrefixList:
+                - prod
+              CountType: imageCountMoreThan
+              CountNumber: 1
+            Action:
+              Type: expire
+          - RulePriority: 2
+            Selection:
+              TagStatus: tagged
+              TagPrefixList:
+                - beta
+              CountType: imageCountMoreThan
+              CountNumber: 1
+            Action:
+              Type: expire
+  MyRepositoryConfig:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref AeroECRRepo
+      ImageScanningConfiguration:
+        scanOnPush: false
+  MyLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      LoadBalancerName: !Ref StrapiALB
+      SecurityGroups: [!Ref ALBSecurityGroup]
+      Subnets: [subnet-24cf0152, subnet-d526f0b1]
+      Scheme: internal
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: '60'
+      Tags:
+        - Key: Name
+          Value: MyLoadBalancer
+  BackendTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Ref StrapiBackEndTG
+      Protocol: HTTP
+      Port: 1337
+      VpcId: !Ref VpcId
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /_health
+      TargetType: ip
+      Targets: []
+  FrontendTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Ref StrapiFrontEndTG
+      Protocol: HTTP
+      Port: 80
+      VpcId: !Ref VpcId
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /_health
+      TargetType: ip
+      Targets: []
+  BackendListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: >-
+        arn:aws-us-gov:elasticloadbalancing:us-gov-west-1:306251499781:loadbalancer/app/lb-aero-wmd-apis/170fc9e31efe3078
+      Priority: 1
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - /backend*
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref StrapiFrontEndTG
+  FrontendListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: >-
+        arn:aws-us-gov:elasticloadbalancing:us-gov-west-1:306251499781:listener/app/lb-aero-hive/8070d708261454aa/ae18abd29dd3691f
+      Priority: 2
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - /frontend*
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref StrapiFrontEndTG
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: ALB Security Group
+      Description: ALB Security Group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+  BackendSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: Backend Security Group
+      Description: Backend Security Group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 1337
+          ToPort: 1337
+          CidrIp: 0.0.0.0/0
+  FileSystemResource:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      FileSystemId: !Ref StrapiFileSystem
+      FileSystemTags:
+        - Key: Name
+          Value: Aero-FileSystem
+      BackupPolicy:
+        Status: ENABLED
+      Encrypted: true
+  Policy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: Statement
+            Effect: Allow
+            Action:
+              - 'elasticfilesystem:ClientMount'
+              - 'elasticfilesystem:ClientRootAccess'
+              - 'elasticfilesystem:ClientWrite'
+            Resource: '*'
+            Condition:
+              Bool:
+                'aws:SecureTransport': 'false'
+ EFSMountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref StrapiFileSystem
+      SubnetId: subnet-24cf0152
+  EFSMountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref StrapiFileSystem
+      SubnetId: subnet-d526f0b1
+  StrapiMediaAccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref StrapiFileSystem
+      PosixUser:
+        Uid: '1000'
+        Gid: '1000'
+      RootDirectory:
+        Path: /media
+  StrapiDBAccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref StrapiFileSystem
+      PosixUser:
+        Uid: '1000'
+        Gid: '1000'
+      RootDirectory:
+        Path: /db
