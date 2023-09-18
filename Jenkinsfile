@@ -1,19 +1,6 @@
-# Update the package repository
-sudo apt-get update -y
-
-# Install required packages for Docker
-sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
-
-# Add Docker's official GPG key
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-
-# Add Docker repository
-sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-
-# Install Docker
-sudo apt-get update -y
-sudo apt-get install -y docker-ce
-
-# Start and enable Docker service
-sudo systemctl start docker
-sudo systemctl enable docker
+Parameter validation failed: parameter type AWS::ElasticLoadBalancingV2::TargetGroup for parameter name StrapiBackEndTG does not exist,
+parameter type AWS::ElasticLoadBalancingV2::LoadBalancer::Name for parameter name StrapiALB does not exist,
+parameter type AWS::ECS::Cluster for parameter name ECSClusterName does not exist, parameter type AWS::EFS::FileSystem::Id for parameter name StrapiFileSystem does not exist,
+parameter type AWS::ECR::Repository::Name for parameter name AeroECRRepo does not exist, parameter type AWS::EFS::AccessPoint::Id for parameter name StrapiMediaAccessPoint does not exist,
+parameter type AWS::ElasticLoadBalancingV2::TargetGroup for parameter name StrapiFrontEndTG does not exist, parameter type AWS::EFS::AccessPoint::Id for parameter name StrapiDBAccessPoint does not exist,
+parameter type AWS::ECS::TaskDefinition for parameter name ECSTaskDefinition does not exist. Rollback requested by user.
