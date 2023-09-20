@@ -1,7 +1,165 @@
-Parameter validation failed: parameter type AWS::ElasticLoadBalancingV2::TargetGroup for parameter name StrapiBackEndTG does not exist, 
-parameter type AWS::ElasticLoadBalancingV2::LoadBalancer::Name for parameter name StrapiALB does not exist, 
-parameter type AWS::ECS::Cluster for parameter name ECSClusterName does not exist, parameter type AWS::EFS::FileSystem::Id for parameter name StrapiFileSystem does not exist, 
-parameter type AWS::ECR::Repository::Name for parameter name AeroECRRepo does not exist, parameter type AWS::EFS::AccessPoint::Id for parameter name StrapiMediaAccessPoint does not exist, 
-parameter type AWS::ElasticLoadBalancingV2::TargetGroup for parameter name StrapiFrontEndTG does not exist, 
-parameter type AWS::EFS::AccessPoint::Id for parameter name StrapiDBAccessPoint does not exist, 
-parameter type AWS::ECS::TaskDefinition for parameter name ECSTaskDefinition does not exist. Rollback requested by user.
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: ID of an existing Amazon VPC.
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of existing Amazon VPC Subnet IDs.
+  EcsClusterName:
+    Type: String
+    Description: Name of the ECS cluster.
+  StrapiEcrRepository:
+    Type: String
+    Description: Name of the ECR repository for Strapi images.
+  StrapiFrontEndTargetGroup:
+    Type: String
+    Description: Name of the target group for the Strapi front-end.
+  StrapiBackEndTargetGroup:
+    Type: String
+    Description: Name of the target group for the Strapi back-end.
+  StrapiEfsFileSystemId:
+    Type: String
+    Description: ID of an existing Amazon EFS file system.
+  StrapiEfsAccessPointId:
+    Type: String
+    Description: ID of the Amazon EFS access point for Strapi.
+  StrapiLoadBalancer:
+    Type: String
+    Description: Name of an existing Application Load Balancer for Strapi.
+
+Resources:
+  EcsCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref EcsClusterName
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: Strapi
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - EC2
+      Cpu: '256'
+      Memory: '512'
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      ContainerDefinitions:
+        - Name: StrapiApp
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${StrapiEcrRepository}:latest
+          PortMappings:
+            - ContainerPort: 1337
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/strapi
+              awslogs-region: !Ref "AWS::Region"
+              awslogs-stream-prefix: strapi
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: StrapiTaskExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  StrapiEfsMountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref StrapiEfsFileSystemId
+      SubnetId: !Select [0, !Ref SubnetIds]
+      SecurityGroups: !Ref EfsSecurityGroup
+
+  StrapiEfsMountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref StrapiEfsFileSystemId
+      SubnetId: !Select [1, !Ref SubnetIds]
+      SecurityGroups: !Ref EfsSecurityGroup
+
+  EfsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Amazon EFS
+      VpcId: !Ref VpcId
+
+  StrapiEfsAccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref StrapiEfsFileSystemId
+      PosixUser:
+        Uid: '1000'
+        Gid: '1000'
+      RootDirectory:
+        Path: /strapi
+
+  LoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: 200
+            ContentType: text/plain
+            ContentBody: "Strapi is up and running."
+      LoadBalancerArn: !Ref StrapiLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  StrapiFrontEndTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Ref StrapiFrontEndTargetGroup
+      Port: 1337
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /_health
+      TargetType: ip
+
+  StrapiBackEndTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Ref StrapiBackEndTargetGroup
+      Port: 1337
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /_health
+      TargetType: ip
+
+  StrapiEcsService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref EcsCluster
+      ServiceName: StrapiService
+      TaskDefinition: !Ref TaskDefinition
+      LaunchType: EC2
+      DesiredCount: 1
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups: !Ref EcsSecurityGroup
+
+  EcsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ECS instances
+      VpcId: !Ref VpcId
+
+Outputs:
+  StrapiUrl:
+    Description: URL of the Strapi application
+    Value: !Sub http://${StrapiLoadBalancerDNSName}/
