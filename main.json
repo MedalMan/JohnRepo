@@ -16,18 +16,6 @@ Parameters:
   StrapiEcrRepository:
     Type: String
     Description: Name of the ECR repository for Strapi images.
-  StrapiFrontEndTargetGroup:
-    Type: String
-    Description: Name of the target group for the Strapi front-end.
-  StrapiBackEndTargetGroup:
-    Type: String
-    Description: Name of the target group for the Strapi back-end.
-  StrapiEfsFileSystemId:
-    Type: String
-    Description: ID of an existing Amazon EFS file system.
-  StrapiEfsAccessPointId:
-    Type: String
-    Description: ID of the Amazon EFS access point for Strapi.
   StrapiLoadBalancer:
     Type: String
     Description: Name of an existing Application Load Balancer for Strapi.
@@ -74,35 +62,50 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
 
-  StrapiEfsMountTarget1:
+  StrapiEfsFileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      FileSystemTags:
+        - Key: Name
+          Value: StrapiEfs
+
+  StrapiEfsMountTargetDatabase:
     Type: AWS::EFS::MountTarget
     Properties:
-      FileSystemId: !Ref StrapiEfsFileSystemId
+      FileSystemId: !Ref StrapiEfsFileSystem
       SubnetId: !Select [0, !Ref SubnetIds]
-      SecurityGroups: !Ref EfsSecurityGroup
 
-  StrapiEfsMountTarget2:
+  StrapiEfsMountTargetMedia:
     Type: AWS::EFS::MountTarget
     Properties:
-      FileSystemId: !Ref StrapiEfsFileSystemId
+      FileSystemId: !Ref StrapiEfsFileSystem
       SubnetId: !Select [1, !Ref SubnetIds]
-      SecurityGroups: !Ref EfsSecurityGroup
 
-  EfsSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for Amazon EFS
-      VpcId: !Ref VpcId
-
-  StrapiEfsAccessPoint:
+  StrapiEfsAccessPointDatabase:
     Type: AWS::EFS::AccessPoint
     Properties:
-      FileSystemId: !Ref StrapiEfsFileSystemId
+      FileSystemId: !Ref StrapiEfsFileSystem
       PosixUser:
         Uid: '1000'
         Gid: '1000'
       RootDirectory:
-        Path: /strapi
+        Path: /strapi_database
+      Tags:
+        - Key: Name
+          Value: StrapiEfsAccessPointDatabase
+
+  StrapiEfsAccessPointMedia:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref StrapiEfsFileSystem
+      PosixUser:
+        Uid: '1000'
+        Gid: '1000'
+      RootDirectory:
+        Path: /strapi_media
+      Tags:
+        - Key: Name
+          Value: StrapiEfsAccessPointMedia
 
   LoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -120,7 +123,7 @@ Resources:
   StrapiFrontEndTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      Name: !Ref StrapiFrontEndTargetGroup
+      Name: StrapiFrontEndTargetGroup
       Port: 1337
       Protocol: HTTP
       VpcId: !Ref VpcId
@@ -131,7 +134,7 @@ Resources:
   StrapiBackEndTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      Name: !Ref StrapiBackEndTargetGroup
+      Name: StrapiBackEndTargetGroup
       Port: 1337
       Protocol: HTTP
       VpcId: !Ref VpcId
@@ -151,7 +154,6 @@ Resources:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
           Subnets: !Ref SubnetIds
-          SecurityGroups: !Ref EcsSecurityGroup
 
   EcsSecurityGroup:
     Type: AWS::EC2::SecurityGroup
