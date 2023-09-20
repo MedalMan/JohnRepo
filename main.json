@@ -1,167 +1,134 @@
 AWSTemplateFormatVersion: '2010-09-09'
-
 Parameters:
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
+  ECSClusterName:
+    Type: String
+    Description: Name of the Cluster
   VpcId:
     Type: AWS::EC2::VPC::Id
-    Description: ID of an existing Amazon VPC.
-  SubnetIds:
-    Type: List<AWS::EC2::Subnet::Id>
-    Description: List of existing Amazon VPC Subnet IDs.
-  EcsClusterName:
+    Description: A VPC that allows instances to access the Internet.
+  SubnetOne:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet One ID.
+  SubnetTwo:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet Two ID.
+  ECSTaskDefinition:
     Type: String
-    Description: Name of the ECS cluster.
-  StrapiEcrRepository:
+    Description: ARN of Task Definition
+  DesiredCount:
+    Type: Number
+    Default: 1
+    Description: Number of task to launch in the ECS service.
+  StrapiFileSystem:
     Type: String
-    Description: Name of the ECR repository for Strapi images.
-  StrapiLoadBalancer:
+    Description: Select from a list of existing File Systems.
+  StrapiALB:
     Type: String
-    Description: Name of an existing Application Load Balancer for Strapi.
+    Description: Name os existing ALB
 
 Resources:
-  EcsCluster:
-    Type: AWS::ECS::Cluster
-    Properties:
-      ClusterName: !Ref EcsClusterName
-
-  TaskDefinition:
-    Type: AWS::ECS::TaskDefinition
-    Properties:
-      Family: Strapi
-      NetworkMode: awsvpc
-      RequiresCompatibilities:
-        - EC2
-      Cpu: '256'
-      Memory: '512'
-      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
-      ContainerDefinitions:
-        - Name: StrapiApp
-          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${StrapiEcrRepository}:latest
-          PortMappings:
-            - ContainerPort: 1337
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-group: /ecs/strapi
-              awslogs-region: !Ref "AWS::Region"
-              awslogs-stream-prefix: strapi
-
-  ExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: StrapiTaskExecutionRole
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ecs-tasks.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-
-  StrapiEfsFileSystem:
-    Type: AWS::EFS::FileSystem
-    Properties:
-      FileSystemTags:
-        - Key: Name
-          Value: StrapiEfs
-
-  StrapiEfsMountTargetDatabase:
-    Type: AWS::EFS::MountTarget
-    Properties:
-      FileSystemId: !Ref StrapiEfsFileSystem
-      SubnetId: !Select [0, !Ref SubnetIds]
-
-  StrapiEfsMountTargetMedia:
-    Type: AWS::EFS::MountTarget
-    Properties:
-      FileSystemId: !Ref StrapiEfsFileSystem
-      SubnetId: !Select [1, !Ref SubnetIds]
-
-  StrapiEfsAccessPointDatabase:
-    Type: AWS::EFS::AccessPoint
-    Properties:
-      FileSystemId: !Ref StrapiEfsFileSystem
-      PosixUser:
-        Uid: '1000'
-        Gid: '1000'
-      RootDirectory:
-        Path: /strapi_database
-      Tags:
-        - Key: Name
-          Value: StrapiEfsAccessPointDatabase
-
-  StrapiEfsAccessPointMedia:
-    Type: AWS::EFS::AccessPoint
-    Properties:
-      FileSystemId: !Ref StrapiEfsFileSystem
-      PosixUser:
-        Uid: '1000'
-        Gid: '1000'
-      RootDirectory:
-        Path: /strapi_media
-      Tags:
-        - Key: Name
-          Value: StrapiEfsAccessPointMedia
-
-  LoadBalancerListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-        - Type: fixed-response
-          FixedResponseConfig:
-            StatusCode: 200
-            ContentType: text/plain
-            ContentBody: "Strapi is up and running."
-      LoadBalancerArn: !Ref StrapiLoadBalancer
-      Port: 80
-      Protocol: HTTP
-
-  StrapiFrontEndTargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      Name: StrapiFrontEndTargetGroup
-      Port: 1337
-      Protocol: HTTP
-      VpcId: !Ref VpcId
-      HealthCheckProtocol: HTTP
-      HealthCheckPath: /_health
-      TargetType: ip
-
-  StrapiBackEndTargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      Name: StrapiBackEndTargetGroup
-      Port: 1337
-      Protocol: HTTP
-      VpcId: !Ref VpcId
-      HealthCheckProtocol: HTTP
-      HealthCheckPath: /_health
-      TargetType: ip
-
-  StrapiEcsService:
-    Type: AWS::ECS::Service
-    Properties:
-      Cluster: !Ref EcsCluster
-      ServiceName: StrapiService
-      TaskDefinition: !Ref TaskDefinition
-      LaunchType: EC2
-      DesiredCount: 1
-      NetworkConfiguration:
-        AwsvpcConfiguration:
-          AssignPublicIp: ENABLED
-          Subnets: !Ref SubnetIds
 
   EcsSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Security group for ECS instances
       VpcId: !Ref VpcId
+      GroupName: 'ECS Security Group'
+      GroupDescription: Security group for ECS instances
 
-Outputs:
-  StrapiUrl:
-    Description: URL of the Strapi application
-    Value: !Sub http://${StrapiLoadBalancerDNSName}/
+  EcsSecurityGroupALBports:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      FromPort: 3000
+      ToPort: 3000
+      CidrIp: 0.0.0.0/0
+      GroupId: !GetAtt EcsSecurityGroup.GroupId
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: strapi
+      Cpu: '256'
+      Memory: '512'
+      NetworkMode: awsvpc
+      ExecutionRoleArn: 'arn:aws:iam::306251499781:role/ecsTaskExecutionRole'
+      ContainerDefinitions:
+        - Name: frontend
+          Image: '306251499781.dkr.ecr.us-gov-west-1.amazonaws.com/aero-strapi-ecr-imagerepo'
+          Essential: true
+          Memory: 512
+          Cpu: 256
+          PortMappings:
+            - ContainerPort: 3000
+      HealthCheck:
+        Command:
+          - CMD
+          - curl
+          - --fail
+          - 'http://localhost:3000'
+        Interval: 300
+      Environment:
+        - Name: AWS_REGION
+          Value: 'US-Gov-West'
+        - Name: NEXT_PUBLIC_STRAPI_API_URL
+          Value: 'http://internal-lb-aero-wmd-apis-440038663.us-gov-west-1.elb.amazonaws.com:1337'
+  ECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref ECSClusterName
+      DesiredCount: !Ref DesiredCount
+      LaunchType: "EC2"
+      SchedulingStrategy: "REPLICA"
+      TaskDefinition: !Ref ECSTaskDefinition
+      # DeploymentConfiguration:
+      #   MaximumPercent: 200
+      #   MinimumHealthyPercent: 100
+      #   DeploymentCircuitBreaker:
+      #     Enable: true
+      #     Rollback: true
+      # DeploymentController:
+      #   Type: ECS
+      # ServiceConnectConfiguration:
+      #   Enabled: false
+      # EnableECSManagedTags: true
+
+  LogConfigurationBackend:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub 'ecs-ec2-task-definition-${AWS::StackName}-backendss'
+      RetentionInDays: 30
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: ALB Security Group
+      GroupDescription: ALB Security Group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+  StrapiMediaAccessPoints:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref StrapiFileSystem
+      PosixUser:
+        Uid: '1000'
+        Gid: '1000'
+      RootDirectory:
+        Path: /media
+  StrapiDBAccessPoints:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref StrapiFileSystem
+      PosixUser:
+        Uid: '1000'
+        Gid: '1000'
+      RootDirectory:
+        Path: /db
