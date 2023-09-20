@@ -1,123 +1,116 @@
 AWSTemplateFormatVersion: '2010-09-09'
-
-Description: AWS CloudFormation Template for deploying Strapi with EFS, ECS, ALB, and ECR
-
 Parameters:
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
-    Description: Name of an existing EC2 KeyPair for SSH access.
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
+  ECSClusterName:
+    Type: String
+    Description: Name of the Cluster
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: A VPC that allows instances to access the Internet.
+  SubnetOne:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet One ID.
+  SubnetTwo:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet Two ID.
+  ECSTaskDefinition:
+    Type: String
+    Description: ARN of Task Definition
+  DesiredCount:
+    Type: Number
+    Default: 1
+    Description: Number of task to launch in the ECS service.
+  StrapiFileSystem:
+    Type: String
+    Description: Select from a list of existing File Systems.
+  StrapiALB:
+    Type: String
+    Description: Name os existing ALB
 
 Resources:
-  Vpc:
-    Type: AWS::EC2::VPC
-    Properties:
-      CidrBlock: 10.0.0.0/16
-      EnableDnsSupport: true
-      EnableDnsHostnames: true
 
-  InternetGateway:
-    Type: AWS::EC2::InternetGateway
-
-  AttachGateway:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      VpcId: !Ref Vpc
-      InternetGatewayId: !Ref InternetGateway
-
-  PublicSubnet:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref Vpc
-      CidrBlock: 10.0.0.0/24
-      AvailabilityZone: us-west-1a
-      MapPublicIpOnLaunch: true
-
-  PrivateSubnet:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref Vpc
-      CidrBlock: 10.0.1.0/24
-      AvailabilityZone: us-west-1b
-
-  SecurityGroup:
+  EcsSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
+      VpcId: !Ref VpcId
+      GroupName: 'ECS Security Group'
       GroupDescription: Security group for ECS instances
-      VpcId: !Ref Vpc
 
-  EFSFileSystem:
-    Type: AWS::EFS::FileSystem
+  EcsSecurityGroupALBports:
+    Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      PerformanceMode: generalPurpose
-      Encrypted: true
-
-  EFSMountTarget1:
-    Type: AWS::EFS::MountTarget
-    Properties:
-      FileSystemId: !Ref EFSFileSystem
-      SubnetId: !Ref PublicSubnet
-      SecurityGroups:
-        - !GetAtt SecurityGroup.GroupId
-
-  EFSMountTarget2:
-    Type: AWS::EFS::MountTarget
-    Properties:
-      FileSystemId: !Ref EFSFileSystem
-      SubnetId: !Ref PrivateSubnet
-      SecurityGroups:
-        - !GetAtt SecurityGroup.GroupId
-
-  ECSCluster:
-    Type: AWS::ECS::Cluster
-
-  ECSTaskDefinition:
-    Type: AWS::ECS::TaskDefinition
-    Properties:
-      NetworkMode: awsvpc
-      RequiresCompatibilities:
-        - EC2
-      ContainerDefinitions:
-        - Name: strapi-container
-          Image: <YourStrapiDockerImage>
-          PortMappings:
-            - ContainerPort: 1337
-
-  ECSALB:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      Name: strapi-alb
-      Subnets:
-        - !Ref PublicSubnet
-      SecurityGroups:
-        - !GetAtt SecurityGroup.GroupId
-
-  ECSALBListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-        - Type: fixed-response
-          FixedResponseConfig:
-            ContentType: text/plain
-            StatusCode: 200
-            ContentType: "text/plain"
-            Content: "Strapi application"
-      LoadBalancerArn: !Ref ECSALB
-      Port: 80
-      Protocol: HTTP
-
+      IpProtocol: tcp
+      FromPort: 80
+      ToPort: 80
+      CidrIp: 0.0.0.0/0
+      GroupId: !GetAtt EcsSecurityGroup.GroupId
   ECSService:
     Type: AWS::ECS::Service
     Properties:
-      Cluster: !Ref ECSCluster
-      LaunchType: EC2
+      Cluster: !Ref ECSClusterName
+      DesiredCount: !Ref DesiredCount
+      LaunchType: "FARGATE"
+      SchedulingStrategy: "REPLICA"
       TaskDefinition: !Ref ECSTaskDefinition
+      PlatformVersion: "LATEST"
       NetworkConfiguration:
         AwsvpcConfiguration:
-          AssignPublicIp: ENABLED
+          AssignPublicIp: "ENABLED"
           Subnets:
-            - !Ref PublicSubnet
+            - !Ref SubnetOne
+            - !Ref SubnetTwo
+          SecurityGroups:
+            - !GetAtt EcsSecurityGroup.GroupId
+      PlatformVersion: LATEST
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      DeploymentController:
+        Type: ECS
+      ServiceConnectConfiguration:
+        Enabled: false
+      EnableECSManagedTags: true
 
-Outputs:
-  StrapiALBURL:
-    Description: URL of the Application Load Balancer
-    Value: !GetAtt ECSALB.DNSName
+  LogConfigurationBackend:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub 'ecs-ec2-task-definition-${AWS::StackName}-backendss'
+      RetentionInDays: 30
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: ALB Security Group
+      GroupDescription: ALB Security Group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+  StrapiMediaAccessPoints:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref StrapiFileSystem
+      PosixUser:
+        Uid: '1000'
+        Gid: '1000'
+      RootDirectory:
+        Path: /media
+  StrapiDBAccessPoints:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref StrapiFileSystem
+      PosixUser:
+        Uid: '1000'
+        Gid: '1000'
+      RootDirectory:
+        Path: /db
