@@ -1,116 +1,29 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Parameters:
-  KeyName:
-    Type: AWS::EC2::KeyPair::KeyName
-    Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
-  ECSClusterName:
-    Type: String
-    Description: Name of the Cluster
-  VpcId:
-    Type: AWS::EC2::VPC::Id
-    Description: A VPC that allows instances to access the Internet.
-  SubnetOne:
-    Type: AWS::EC2::Subnet::Id
-    Description: Subnet One ID.
-  SubnetTwo:
-    Type: AWS::EC2::Subnet::Id
-    Description: Subnet Two ID.
-  ECSTaskDefinition:
-    Type: String
-    Description: ARN of Task Definition
-  DesiredCount:
-    Type: Number
-    Default: 1
-    Description: Number of task to launch in the ECS service.
-  StrapiFileSystem:
-    Type: String
-    Description: Select from a list of existing File Systems.
-  StrapiALB:
-    Type: String
-    Description: Name os existing ALB
+import boto3
+from datetime import datetime, timedelta
+from dateutil import tz
 
-Resources:
+def lambda_handler(event, context):
+    client = boto3.client('elbv2')  # Create ELB client
 
-  EcsSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      VpcId: !Ref VpcId
-      GroupName: 'ECS Security Group'
-      GroupDescription: Security group for ECS instances
+    # List of Elastic Load Balancers to check
+    elbs = ['arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/MyELB/abcdefg']
 
-  EcsSecurityGroupALBports:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      IpProtocol: tcp
-      FromPort: 80
-      ToPort: 80
-      CidrIp: 0.0.0.0/0
-      GroupId: !GetAtt EcsSecurityGroup.GroupId
-  ECSService:
-    Type: AWS::ECS::Service
-    Properties:
-      Cluster: !Ref ECSClusterName
-      DesiredCount: !Ref DesiredCount
-      LaunchType: "FARGATE"
-      SchedulingStrategy: "REPLICA"
-      TaskDefinition: !Ref ECSTaskDefinition
-      PlatformVersion: "LATEST"
-      NetworkConfiguration:
-        AwsvpcConfiguration:
-          AssignPublicIp: "ENABLED"
-          Subnets:
-            - !Ref SubnetOne
-            - !Ref SubnetTwo
-          SecurityGroups:
-            - !GetAtt EcsSecurityGroup.GroupId
-      PlatformVersion: LATEST
-      DeploymentConfiguration:
-        MaximumPercent: 200
-        MinimumHealthyPercent: 100
-        DeploymentCircuitBreaker:
-          Enable: true
-          Rollback: true
-      DeploymentController:
-        Type: ECS
-      ServiceConnectConfiguration:
-        Enabled: false
-      EnableECSManagedTags: true
+    expiration_threshold_days = 30  # Set your threshold
 
-  LogConfigurationBackend:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub 'ecs-ec2-task-definition-${AWS::StackName}-backendss'
-      RetentionInDays: 30
-  ALBSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: ALB Security Group
-      GroupDescription: ALB Security Group
-      VpcId: !Ref VpcId
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 3000
-          ToPort: 3000
-          CidrIp: 0.0.0.0/0
-  StrapiMediaAccessPoints:
-    Type: AWS::EFS::AccessPoint
-    Properties:
-      FileSystemId: !Ref StrapiFileSystem
-      PosixUser:
-        Uid: '1000'
-        Gid: '1000'
-      RootDirectory:
-        Path: /media
-  StrapiDBAccessPoints:
-    Type: AWS::EFS::AccessPoint
-    Properties:
-      FileSystemId: !Ref StrapiFileSystem
-      PosixUser:
-        Uid: '1000'
-        Gid: '1000'
-      RootDirectory:
-        Path: /db
+    for elb in elbs:
+        response = client.describe_load_balancers(Names=[elb])
+        lb = response['LoadBalancers'][0]
+
+        for cert in lb['SslPolicies'][0]['SslServerCertificate']['ServerCertificateArn']:
+            response = client.describe_server_certificates(ServerCertificateName=cert)
+            certificate = response['ServerCertificates'][0]
+
+            expiration_date = certificate['Expiration']
+            now = datetime.now(tz.tzutc())
+            threshold_date = now + timedelta(days=expiration_threshold_days)
+
+            if expiration_date < threshold_date:
+                # Send alert (you can use SNS or other methods)
+                print(f"Certificate {cert} for ELB {elb} is about to expire on {expiration_date}")
+
+# Add code to send alerts (e.g., using SNS) as needed
