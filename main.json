@@ -3,11 +3,18 @@
   "description": "Apply past monthly security updates",
   "mainSteps": [
     {
-      "action": "aws:runPatchBaseline",
-      "name": "runPatchBaseline",
+      "action": "aws:runShellScript",
+      "name": "runShellScript",
       "inputs": {
-        "Operation": "Install",
-        "Name": "YourPatchBaselineName"  // Replace with your patch baseline name
+        "runCommand": [
+          "aws",
+          "ssm",
+          "create-patch-baseline",
+          "--operation",
+          "Install",
+          "--name",
+          "YourPatchBaselineName"  // Replace with your patch baseline name
+        ]
       }
     }
   ]
