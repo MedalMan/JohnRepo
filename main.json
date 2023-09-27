@@ -1,134 +1,14 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Parameters:
-  KeyName:
-    Type: AWS::EC2::KeyPair::KeyName
-    Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
-  ECSClusterName:
-    Type: String
-    Description: Name of the Cluster
-  VpcId:
-    Type: AWS::EC2::VPC::Id
-    Description: A VPC that allows instances to access the Internet.
-  SubnetOne:
-    Type: AWS::EC2::Subnet::Id
-    Description: Subnet One ID.
-  SubnetTwo:
-    Type: AWS::EC2::Subnet::Id
-    Description: Subnet Two ID.
-  ECSTaskDefinition:
-    Type: String
-    Description: ARN of Task Definition
-  DesiredCount:
-    Type: Number
-    Default: 1
-    Description: Number of task to launch in the ECS service.
-  StrapiFileSystem:
-    Type: String
-    Description: Select from a list of existing File Systems.
-  StrapiALB:
-    Type: String
-    Description: Name os existing ALB
-
-Resources:
-
-  EcsSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      VpcId: !Ref VpcId
-      GroupName: 'ECS Security Group'
-      GroupDescription: Security group for ECS instances
-
-  EcsSecurityGroupALBports:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      IpProtocol: tcp
-      FromPort: 3000
-      ToPort: 3000
-      CidrIp: 0.0.0.0/0
-      GroupId: !GetAtt EcsSecurityGroup.GroupId
-  TaskDefinition:
-    Type: AWS::ECS::TaskDefinition
-    Properties:
-      Family: strapi
-      Cpu: '256'
-      Memory: '512'
-      NetworkMode: awsvpc
-      ExecutionRoleArn: 'arn:aws:iam::306251499781:role/ecsTaskExecutionRole'
-      ContainerDefinitions:
-        - Name: frontend
-          Image: '306251499781.dkr.ecr.us-gov-west-1.amazonaws.com/aero-strapi-ecr-imagerepo'
-          Essential: true
-          Memory: 512
-          Cpu: 256
-          PortMappings:
-            - ContainerPort: 3000
-      HealthCheck:
-        Command:
-          - CMD
-          - curl
-          - --fail
-          - 'http://localhost:3000'
-        Interval: 300
-      Environment:
-        - Name: AWS_REGION
-          Value: 'US-Gov-West'
-        - Name: NEXT_PUBLIC_STRAPI_API_URL
-          Value: 'http://internal-lb-aero-wmd-apis-440038663.us-gov-west-1.elb.amazonaws.com:1337'
-  ECSService:
-    Type: AWS::ECS::Service
-    Properties:
-      Cluster: !Ref ECSClusterName
-      DesiredCount: !Ref DesiredCount
-      LaunchType: "EC2"
-      SchedulingStrategy: "REPLICA"
-      TaskDefinition: !Ref ECSTaskDefinition
-      # DeploymentConfiguration:
-      #   MaximumPercent: 200
-      #   MinimumHealthyPercent: 100
-      #   DeploymentCircuitBreaker:
-      #     Enable: true
-      #     Rollback: true
-      # DeploymentController:
-      #   Type: ECS
-      # ServiceConnectConfiguration:
-      #   Enabled: false
-      # EnableECSManagedTags: true
-
-  LogConfigurationBackend:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub 'ecs-ec2-task-definition-${AWS::StackName}-backendss'
-      RetentionInDays: 30
-  ALBSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: ALB Security Group
-      GroupDescription: ALB Security Group
-      VpcId: !Ref VpcId
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 3000
-          ToPort: 3000
-          CidrIp: 0.0.0.0/0
-  StrapiMediaAccessPoints:
-    Type: AWS::EFS::AccessPoint
-    Properties:
-      FileSystemId: !Ref StrapiFileSystem
-      PosixUser:
-        Uid: '1000'
-        Gid: '1000'
-      RootDirectory:
-        Path: /media
-  StrapiDBAccessPoints:
-    Type: AWS::EFS::AccessPoint
-    Properties:
-      FileSystemId: !Ref StrapiFileSystem
-      PosixUser:
-        Uid: '1000'
-        Gid: '1000'
-      RootDirectory:
-        Path: /db
+{
+  "schemaVersion": "2.2",
+  "description": "Apply past monthly security updates",
+  "mainSteps": [
+    {
+      "action": "aws:runPatchBaseline",
+      "name": "runPatchBaseline",
+      "inputs": {
+        "Operation": "Install",
+        "Name": "YourPatchBaselineName"  // Replace with your patch baseline name
+      }
+    }
+  ]
+}
