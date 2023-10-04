@@ -1,1 +1,16 @@
-https://docs.google.com/forms/d/e/1FAIpQLScC_o4wIx0yHCCt06Oai4Kxe2Mwb9Hl3-tI9XrXqmWdYA44Qg/viewform?usp=sf_link
+stages:
+  - deploy
+
+deploy_cloudformation:
+  stage: deploy
+  image: amazon/aws-cli:2.x  # Use an AWS CLI Docker image
+  script:
+    - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+    - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+    - aws configure set region us-east-1  # Set your desired AWS region
+    - aws cloudformation deploy \
+        --stack-name YourStackName \
+        --template-file path/to/your/template.yml \
+        --capabilities CAPABILITY_IAM
+  only:
+    - master  # Define the branch to trigger deployments (e.g., master branch)
