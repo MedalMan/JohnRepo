@@ -1,29 +1,30 @@
-import boto3
-from datetime import datetime, timedelta
-from dateutil import tz
+image: 
 
-def lambda_handler(event, context):
-    client = boto3.client('elbv2')  # Create ELB client
+stage:
+  - validate
+  - deploy
 
-    # List of Elastic Load Balancers to check
-    elbs = ['arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/MyELB/abcdefg']
+##### Validate #####
 
-    expiration_threshold_days = 30  # Set your threshold
+validate:
+    stage: validate
+    script:
+          - 
 
-    for elb in elbs:
-        response = client.describe_load_balancers(Names=[elb])
-        lb = response['LoadBalancers'][0]
+##### Deploy #####
 
-        for cert in lb['SslPolicies'][0]['SslServerCertificate']['ServerCertificateArn']:
-            response = client.describe_server_certificates(ServerCertificateName=cert)
-            certificate = response['ServerCertificates'][0]
+deploy:
+  stage: deplot
+  variables:
+    stackname: strapi-cf.yml
+script:
+    - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+    - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+    - aws configure set region us-gov-west-1  # Set your desired AWS region
+    - aws cloudformation deploy \
+        --stack-name strapi-cf.yml \
+        --template-file path/to/your/template.yml \
+        --capabilities CAPABILITY_IAM
 
-            expiration_date = certificate['Expiration']
-            now = datetime.now(tz.tzutc())
-            threshold_date = now + timedelta(days=expiration_threshold_days)
 
-            if expiration_date < threshold_date:
-                # Send alert (you can use SNS or other methods)
-                print(f"Certificate {cert} for ELB {elb} is about to expire on {expiration_date}")
 
-# Add code to send alerts (e.g., using SNS) as needed
