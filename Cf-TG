@@ -1,6 +1,6 @@
-image: 
+image: lmregistry.us.lmco.com/lmc.eo.swf.lmified/ext.hub.docker.com/bitnami/aws-cli:latest
 
-stage:
+stages:
   - validate
   - deploy
 
@@ -9,22 +9,15 @@ stage:
 validate:
     stage: validate
     script:
-          - 
+     - aws cloudformation validate-template --template-body file://strapi-cf.yml
 
 ##### Deploy #####
 
 deploy:
-  stage: deplot
+  stage: deploy
   variables:
     stackname: strapi-cf.yml
-script:
-    - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-    - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-    - aws configure set region us-gov-west-1  # Set your desired AWS region
-    - aws cloudformation deploy \
-        --stack-name strapi-cf.yml \
-        --template-file path/to/your/template.yml \
-        --capabilities CAPABILITY_IAM
-
+  script:
+    - aws cloudformation deploy --template-file ./strapi-cf.yml --parameter-overrides file://parameters.json --stack-name $stackName
 
 
