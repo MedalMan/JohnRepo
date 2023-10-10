@@ -1,15 +1,1 @@
-stages:
-  - deploy
-
-variables:
-  STACK_NAME: my-cloudformation-stack-name
-  AWS_REGION: us-east-1 # Replace with your desired AWS region
-  TEMPLATE_FILE: cloudformation-template.yml # Replace with your CloudFormation template file name
-  PARAMETERS_FILE: cloudformation-parameters.json # Replace with your CloudFormation parameters file name
-
-deploy:
-  stage: deploy
-  script:
-    - aws cloudformation create-stack --stack-name $STACK_NAME --template-body file://$TEMPLATE_FILE --region $AWS_REGION --parameters file://$PARAMETERS_FILE
-  only:
-    - master # Set the branch where you want to trigger this job
+PANIC:  could not locate a valid checkpoint record
