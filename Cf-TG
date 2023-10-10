@@ -1,5 +1,3 @@
-docker run -it -v ecs-vhw-strapi-prod-3-vhwDB:var/lib/postgresql/data postgres /bin/bash
 Unable to find image 'postgres:latest' locally
-
-
-https://stackoverflow.com/questions/48197579/docker-postgres-invalid-primary-checkpoint-record
+docker: Error response from daemon: Get "https://registry-1.docker.io/v2/": read tcp 140.169.47.89:45300->34.194.164.123:443: read: connection reset by peer.
+See 'docker run --help'.
