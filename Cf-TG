@@ -1,1 +1,5 @@
-PANIC:  could not locate a valid checkpoint record
+docker run -it -v ecs-vhw-strapi-prod-3-vhwDB:var/lib/postgresql/data postgres /bin/bash
+Unable to find image 'postgres:latest' locally
+
+
+https://stackoverflow.com/questions/48197579/docker-postgres-invalid-primary-checkpoint-record
