@@ -1,9 +1,40 @@
-{
-  "proxies": {
-    "default": {
-      "httpProxy": "http://your-proxy-server:your-proxy-port",
-      "httpsProxy": "http://your-proxy-server:your-proxy-port",
-      "noProxy": "localhost,127.0.0.1"
-    }
-  }
-}
+ContentJob0:
+    ContainerPath: String
+    Description: Enter a container path where the Volume will be 
+
+    Type: 'AWS::Batch::JobDefinition'
+    Properties:
+      Type: Container
+      ContainerProperties:
+        Command: 
+          - ls
+        Environment:
+          - Name: AAA
+            Value: AAA
+        ExecutionRoleArn: !GetAtt BatchJobRole.Arn
+        Image: !Join ['', [!Ref 'AWS::AccountId','.dkr.ecr.', !Ref 'AWS::Region', '.amazonaws.com/', !Ref Image ]]
+        LogConfiguration:
+          LogDriver: awslogs
+        JobRoleArn: !Ref BatchContainerRole
+        Memory: 2048
+        Vcpus: 2
+        Volumes:
+          - Name: MISC
+            Host:
+              SourcePath: '/mnt/efs-0'
+          - Name: JOBS
+            Host:
+              SourcePath: '/mnt/efs-1'
+        MountPoints:
+          - SourceVolume: MISC
+            ContainerPath: '/mnt/efs-0'
+          - SourceVolume: JOBS
+            ContainerPath: !Ref '
+      JobDefinitionName: !Join ['-', ['MyJob', !Ref ServiceName, 'EC2', '0']]
+      PlatformCapabilities:
+        - EC2
+      PropagateTags: true
+      RetryStrategy: 
+        Attempts: 3
+      Timeout: 
+        AttemptDurationSeconds: 300
