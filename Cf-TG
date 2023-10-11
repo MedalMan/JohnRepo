@@ -1,3 +1,9 @@
-Unable to find image 'postgres:latest' locally
-docker: Error response from daemon: Get "https://registry-1.docker.io/v2/": read tcp 140.169.47.89:45300->34.194.164.123:443: read: connection reset by peer.
-See 'docker run --help'.
+{
+  "proxies": {
+    "default": {
+      "httpProxy": "http://your-proxy-server:your-proxy-port",
+      "httpsProxy": "http://your-proxy-server:your-proxy-port",
+      "noProxy": "localhost,127.0.0.1"
+    }
+  }
+}
