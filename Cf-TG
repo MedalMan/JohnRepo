@@ -1,12 +1,2 @@
-volumes:
-  - name: efs-volume
-    efsVolumeConfiguration:
-      fileSystemId: your-efs-file-system-id
-      rootDirectory: /your/mount/point
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' container_name_or_id
 
-containerDefinitions:
-  - name: your-container-name
-    image: your-container-image
-    mountPoints:
-      - sourceVolume: efs-volume
-        containerPath: /path/in/container
