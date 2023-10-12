@@ -1,2 +1,5 @@
-docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' container_name_or_id
+# Postgres >= 10
+pg_resetwal DATADIR
 
+# Postgres < 10
+pg_resetxlog DATADIR
