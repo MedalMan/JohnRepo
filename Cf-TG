@@ -1,5 +1,60 @@
-# Postgres >= 10
-pg_resetwal DATADIR
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  EnvType: 
+    Type: 'String'
+    Description: Environment type.
+    Default: integ
+    AllowedValues:
+      - prod
+      - integ
+    ConstraintDescription: must specify integ or prod.
+  AppName:
+    Type: 'String'
+    Description: Name of project, include strapi. Ex. vep-hola-strapi
+  AppDnsValue:
+    Type: 'String'
+    Description: Host DNS of application ex. vep.us.lmco.com
+  AppPathValue:
+    Type: 'String'
+    Description: Path attatched to DNS of application ex. /hola
+  DesiredTaskValue:
+    Type: Number
+    Default: 0
+  Listener:
+    Type: 'String'
+    Description: (ARN) of the listener.
+  ListenerRulePriority:
+    Type: Number
+    Description: Enter new rule priority, this cannot replace a priorty rule.
+  StrapiPostgresUser:
+    Type: 'String'
+    Description: 'Found in Strapi''s env file.'
+  StrapiPostgresPassword:
+    Type: 'String'
+    Description: 'Found in Strapi''s env file.'
+  StrapiPostgresDBName:
+    Type: 'String'
+    Description: 'Found in Strapi''s env file.'
+  StrapiApiTokenSalt:
+    Type: 'String'
+    Description: 'Found in Strapi''s env file.'
+  StrapiAppKey:
+    Type: 'String'
+    Description: 'Found in Strapi''s env file.'
+  StrapiJwtSecret:
+    Type: 'String'
+    Description: 'Found in Strapi''s env file.'
+  StrapiAdminJWTSecret:
+    Type: 'String'
+    Description: 'Found in Strapi''s env file.'
+  StrapiPublicUrl:
+    Type: 'String'
+    Description: 'Found in Strapi''s env file.'
+  WmdVpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: A VPC that allows instances to access the Internet.
 
-# Postgres < 10
-pg_resetxlog DATADIR
+Conditions:
+  ProdEnvironment: !Equals 
+    - !Ref EnvType
+    - prod
