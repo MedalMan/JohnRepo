@@ -1,17 +1,36 @@
 const response = require('cfn-response');
 const aws = require('aws-sdk');
-const s3 = new aws.S3();
+const efs = new aws.efs({ region: 'us-east-1' }); // Replace with your desired region
 
 exports.handler = async (event, context) => {
-  console.log('Received event:', JSON.stringify(event, null, 2));
+  console.log('Received event:', JSON.stringify(event, null, 2);
 
   try {
     if (event.RequestType === 'Create' || event.RequestType === 'Update') {
       const rootDirectory = event.ResourceProperties.RootDirectory;
-      // Do your custom logic here to use the rootDirectory value as needed.
+      const fileSystemId = 'fs-12345678'; // Replace with your EFS file system ID
 
-      // Send a SUCCESS response back to CloudFormation.
-      response.send(event, context, response.SUCCESS);
+      // Create the EFS mount target
+      const mountTargetParams = {
+        FileSystemId: fileSystemId,
+        SubnetId: 'subnet-12345678', // Replace with your subnet ID
+      };
+
+      const mountTargetData = await efs.createMountTarget(mountTargetParams).promise();
+
+      // Create the root directory
+      const directoryParams = {
+        FileSystemId: fileSystemId,
+        Path: rootDirectory,
+      };
+
+      const directoryData = await efs.createAccessPoint(directoryParams).promise();
+
+      // Send a SUCCESS response back to CloudFormation
+      response.send(event, context, response.SUCCESS, {
+        MountTargetId: mountTargetData.MountTargetId,
+        AccessPointId: directoryData.AccessPointId,
+      });
     } else if (event.RequestType === 'Delete') {
       // No need to do anything specific during stack deletion.
       response.send(event, context, response.SUCCESS);
