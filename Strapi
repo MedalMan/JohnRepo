@@ -1,7 +1,10 @@
-Resources:
-  MyCustomResource:
-    Type: Custom::EfsCustomResource
-    Properties:
-      ServiceToken: !GetAtt MyLambdaFunction.Arn
-      EfsFileSystemId: "fs-0123456789abcdef0" # Replace with your EFS file system ID
-      RootDirectory: "/my-custom-directory"
+Parameters:
+  EfsFileSystemIdParameter:
+    Type: String
+    Default: "fs-0123456789abcdef0" # Default EFS file system ID, you can change this
+    Description: EFS file system ID
+
+  RootDirectoryParameter:
+    Type: String
+    Default: "/my-custom-directory" # Default root directory, you can change this
+    Description: Root directory for EFS
