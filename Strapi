@@ -1,9 +1,7 @@
-2023-10-14T09:23:45.397Z	undefined	ERROR	Uncaught Exception 	{"errorType":"Runtime.ImportModuleError","errorMessage":"Error: Cannot find module 'index'\nRequire stack:\n- /var/runtime/index.mjs","stack":["Runtime.ImportModuleError: Error: Cannot find module 'index'","Require stack:","- /var/runtime/index.mjs","    at _loadUserApp (file:///var/runtime/index.mjs:997:17)","    at async UserFunction.js.module.exports.load (file:///var/runtime/index.mjs:1032:21)","    at async start (file:///var/runtime/index.mjs:1195:23)","    at async file:///var/runtime/index.mjs:1201:1"]}
-INIT_REPORT Init Duration: 231.22 ms	Phase: init	Status: error	Error Type: Runtime.ExitError
-2023-10-14T09:23:47.713Z	undefined	ERROR	Uncaught Exception 	{"errorType":"Runtime.ImportModuleError","errorMessage":"Error: Cannot find module 'index'\nRequire stack:\n- /var/runtime/index.mjs","stack":["Runtime.ImportModuleError: Error: Cannot find module 'index'","Require stack:","- /var/runtime/index.mjs","    at _loadUserApp (file:///var/runtime/index.mjs:997:17)","    at async UserFunction.js.module.exports.load (file:///var/runtime/index.mjs:1032:21)","    at async start (file:///var/runtime/index.mjs:1195:23)","    at async file:///var/runtime/index.mjs:1201:1"]}
-INIT_REPORT Init Duration: 2518.77 ms	Phase: invoke	Status: error	Error Type: Runtime.ExitError
-START RequestId: f677731c-d434-4a3e-b8b5-e0761f1eeb8c Version: $LATEST
-Unknown application error occurred
-Runtime.ImportModuleError
-END RequestId: f677731c-d434-4a3e-b8b5-e0761f1eeb8c
-REPORT RequestId: f677731c-d434-4a3e-b8b5-e0761f1eeb8c	Duration: 2539.11 ms	Billed Duration: 2540 ms	Memory Size: 128 MB	Max Memory Used: 18 MB
+Resources:
+  MyCustomResource:
+    Type: Custom::EfsCustomResource
+    Properties:
+      ServiceToken: !GetAtt MyLambdaFunction.Arn
+      EfsFileSystemId: "fs-0123456789abcdef0" # Replace with your EFS file system ID
+      RootDirectory: "/my-custom-directory"
