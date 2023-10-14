@@ -1,18 +1,27 @@
-cfroot_directory_event
+const response = require('cfn-response');
+const aws = require('aws-sdk');
+const s3 = new aws.S3();
 
-Response
-{
-  "errorMessage": "Unable to import module 'lambda_function': No module named 'cfnresponse'",
-  "errorType": "Runtime.ImportModuleError",
-  "requestId": "0dcd0e1f-70c7-4c42-a0e1-09b7cda24f8d",
-  "stackTrace": []
-}
+exports.handler = async (event, context) => {
+  console.log('Received event:', JSON.stringify(event, null, 2));
 
-Function Logs
-START RequestId: 0dcd0e1f-70c7-4c42-a0e1-09b7cda24f8d Version: $LATEST
-[ERROR] Runtime.ImportModuleError: Unable to import module 'lambda_function': No module named 'cfnresponse'
-Traceback (most recent call last):END RequestId: 0dcd0e1f-70c7-4c42-a0e1-09b7cda24f8d
-REPORT RequestId: 0dcd0e1f-70c7-4c42-a0e1-09b7cda24f8d	Duration: 13.18 ms	Billed Duration: 14 ms	Memory Size: 128 MB	Max Memory Used: 53 MB	Init Duration: 282.31 ms
+  try {
+    if (event.RequestType === 'Create' || event.RequestType === 'Update') {
+      const rootDirectory = event.ResourceProperties.RootDirectory;
+      // Do your custom logic here to use the rootDirectory value as needed.
 
-Request ID
-0dcd0e1f-70c7-4c42-a0e1-09b7cda24f8d
+      // Send a SUCCESS response back to CloudFormation.
+      response.send(event, context, response.SUCCESS);
+    } else if (event.RequestType === 'Delete') {
+      // No need to do anything specific during stack deletion.
+      response.send(event, context, response.SUCCESS);
+    } else {
+      // For unexpected RequestTypes, send a FAILED response.
+      response.send(event, context, response.FAILED, {});
+    }
+  } catch (err) {
+    console.log('Error:', err);
+    // Send a FAILED response in case of an error.
+    response.send(event, context, response.FAILED, {});
+  }
+};
