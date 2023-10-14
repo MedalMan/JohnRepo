@@ -1,23 +1,90 @@
-Resources:
-  MyCustomResource:
-    Type: Custom::EfsCustomResource
-    Properties:
-      ServiceToken: !GetAtt MyLambdaFunction.Arn
-      EfsFileSystemId: "fs-0123456789abcdef0" # Replace with your EFS file system ID
-      RootDirectory: "/my-custom-directory"
-
-
-
-
-import boto3
-import cfnresponse
-
-def lambda_handler(event, context):
-    efs_fs_id = event['ResourceProperties']['EfsFileSystemId']
-    root_directory = event['ResourceProperties']['RootDirectory']
-    
-    # Use boto3 to interact with EFS using efs_fs_id and root_directory
-    
-    # Send a response to CloudFormation
-    response_data = {}  # Add response data if needed
-    cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+      "EnvType": {
+          "Type": "String",
+          "Description": "Environment type.",
+          "Default": "integ",
+          "AllowedValues": [
+              "prod",
+              "integ"
+          ],
+          "ConstraintDescription": "Must specify integ or prod."
+      },
+      "AppName": {
+          "Type": "String",
+          "Description": "Name of the project, include strapi. Ex. vep-hola-strapi"
+      },
+      "AppDnsValue": {
+          "Type": "String",
+          "Description": "Host DNS of the application, e.g., vep.us.lmco.com"
+      },
+      "AppPathValue": {
+          "Type": "String",
+          "Description": "Path attached to the DNS of the application, e.g., /hola"
+      },
+      "DesiredTaskValue": {
+          "Type": "Number",
+          "Default": 0
+      },
+      "Listener": {
+          "Type": "String",
+          "Description": "ARN of the listener."
+      },
+      "ListenerRulePriority": {
+          "Type": "Number",
+          "Description": "Enter a new rule priority; this cannot replace a priority rule."
+      },
+      "StrapiPostgresUser": {
+          "Type": "String",
+          "Description": "Found in Strapi's env file."
+      },
+      "StrapiPostgresPassword": {
+          "Type": "String",
+          "Description": "Found in Strapi's env file."
+      },
+      "StrapiPostgresDBName": {
+          "Type": "String",
+          "Description": "Found in Strapi's env file."
+      },
+      "StrapiApiTokenSalt": {
+          "Type": "String",
+          "Description": "Found in Strapi's env file."
+      },
+      "StrapiAppKey": {
+          "Type": "String",
+          "Description": "Found in Strapi's env file."
+      },
+      "StrapiJwtSecret": {
+          "Type": "String",
+          "Description": "Found in Strapi's env file."
+      },
+      "StrapiAdminJWTSecret": {
+          "Type": "String",
+          "Description": "Found in Strapi's env file."
+      },
+      "StrapiPublicUrl": {
+          "Type": "String",
+          "Description": "Found in Strapi's env file."
+      },
+      "WmdVpcId": {
+          "Type": "AWS::EC2::VPC::Id",
+          "Description": "A VPC that allows instances to access the Internet."
+      },
+      "RootDirectory": {
+          "Type": "String",
+          "Default": "/my-custom-directory",
+          "Description": "Root directory for EFS."
+      }
+  },
+  "Conditions": {
+      "ProdEnvironment": {
+          "Fn::Equals": [
+              {
+                  "Ref": "EnvType"
+              },
+              "prod"
+          ]
+      }
+  }
+}
