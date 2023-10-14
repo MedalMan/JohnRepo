@@ -1,2 +1,21 @@
-Template error: Fn::If requires a list argument with three elements
-
+Parameter validation failed:
+Invalid type for parameter Parameters[0].ParameterValue, value: {'Type': 'String', 'Description': 'Environment type.', 'Default': 'integ', 'AllowedValues': ['prod', 'integ'], 'ConstraintDescription': 'Must specify integ or prod.'}, type: <class 'dict'>, valid types: <class 'str'>
+Invalid type for parameter Parameters[1].ParameterValue, value: {'Type': 'String', 'Description': 'Name of the project, include strapi. Ex. vep-hola-strapi'}, type: <class 'dict'>, valid types: <class 'str'>
+Invalid type for parameter Parameters[2].ParameterValue, value: {'Type': 'String', 'Description': 'Host DNS of the application, e.g., vep.us.lmco.com'}, type: <class 'dict'>, valid types: <class 'str'>
+Invalid type for parameter Parameters[3].ParameterValue, value: {'Type': 'String', 'Description': 'Path attached to the DNS of the application, e.g., /hola'}, type: <class 'dict'>, valid types: <class 'str'>
+Invalid type for parameter Parameters[4].ParameterValue, value: {'Type': 'Number', 'Default': 0}, type: <class 'dict'>, valid types: <class 'str'>
+Invalid type for parameter Parameters[5].ParameterValue, value: {'Type': 'String', 'Description': 'ARN of the listener.'}, type: <class 'dict'>, valid types: <class 'str'>
+Invalid type for parameter Parameters[6].ParameterValue, value: {'Type': 'Number', 'Description': 'Enter a new rule priority; this cannot replace a priority rule.'}, type: <class 'dict'>, valid types: <class 'str'>
+Invalid type for parameter Parameters[7].ParameterValue, value: {'Type': 'String', 'Description': "Found in Strapi's env file."}, type: <class 'dict'>, valid types: <class 'str'>
+Invalid type for parameter Parameters[8].ParameterValue, value: {'Type': 'String', 'Description': "Found in Strapi's env file."}, type: <class 'dict'>, valid types: <class 'str'>
+Invalid type for parameter Parameters[9].ParameterValue, value: {'Type': 'String', 'Description': "Found in Strapi's env file."}, type: <class 'dict'>, valid types: <class 'str'>
+Invalid type for parameter Parameters[10].ParameterValue, value: {'Type': 'String', 'Description': "Found in Strapi's env file."}, type: <class 'dict'>, valid types: <class 'str'>
+Invalid type for parameter Parameters[11].ParameterValue, value: {'Type': 'String', 'Description': "Found in Strapi's env file."}, type: <class 'dict'>, valid types: <class 'str'>
+Invalid type for parameter Parameters[12].ParameterValue, value: {'Type': 'String', 'Description': "Found in Strapi's env file."}, type: <class 'dict'>, valid types: <class 'str'>
+Invalid type for parameter Parameters[13].ParameterValue, value: {'Type': 'String', 'Description': "Found in Strapi's env file."}, type: <class 'dict'>, valid types: <class 'str'>
+Invalid type for parameter Parameters[14].ParameterValue, value: {'Type': 'String', 'Description': "Found in Strapi's env file."}, type: <class 'dict'>, valid types: <class 'str'>
+Invalid type for parameter Parameters[15].ParameterValue, value: {'Type': 'AWS::EC2::VPC::Id', 'Description': 'A VPC that allows instances to access the Internet.'}, type: <class 'dict'>, valid types: <class 'str'>
+Invalid type for parameter Parameters[16].ParameterValue, value: {'Type': 'String', 'Default': '/my-custom-directory', 'Description': 'Root directory for EFS.'}, type: <class 'dict'>, valid types: <class 'str'>
+Cleaning up project directory and file based variables
+00:00
+ERROR: Job failed: exit code 1
