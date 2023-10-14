@@ -1,14 +1,23 @@
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "elasticfilesystem:ClientMount",
-                "elasticfilesystem:ClientWrite",
-                "elasticfilesystem:ClientRootAccess"
-            ],
-            "Resource": "arn:aws:elasticfilesystem:REGION:ACCOUNT_ID:file-system/fs-12345678"
-        }
-    ]
-}
+Resources:
+  MyCustomResource:
+    Type: Custom::EfsCustomResource
+    Properties:
+      ServiceToken: !GetAtt MyLambdaFunction.Arn
+      EfsFileSystemId: "fs-0123456789abcdef0" # Replace with your EFS file system ID
+      RootDirectory: "/my-custom-directory"
+
+
+
+
+import boto3
+import cfnresponse
+
+def lambda_handler(event, context):
+    efs_fs_id = event['ResourceProperties']['EfsFileSystemId']
+    root_directory = event['ResourceProperties']['RootDirectory']
+    
+    # Use boto3 to interact with EFS using efs_fs_id and root_directory
+    
+    # Send a response to CloudFormation
+    response_data = {}  # Add response data if needed
+    cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
