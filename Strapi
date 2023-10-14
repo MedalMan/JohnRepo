@@ -1,118 +1,123 @@
 AWSTemplateFormatVersion: 2010-09-09
+
 Parameters:
-  EnvType: 
-    Type: 'String'
+  EnvType:
+    Type: String
     Description: Environment type.
     Default: integ
     AllowedValues:
       - prod
       - integ
-    ConstraintDescription: must specify integ or prod.
+    ConstraintDescription: Must specify integ or prod.
   AppName:
-    Type: 'String'
-    Description: Name of project, include strapi. Ex. vep-hola-strapi
+    Type: String
+    Description: Name of the project, include strapi. Ex. vep-hola-strapi
   AppDnsValue:
-    Type: 'String'
-    Description: Host DNS of application ex. vep.us.lmco.com
+    Type: String
+    Description: Host DNS of the application, e.g., vep.us.lmco.com
   AppPathValue:
-    Type: 'String'
-    Description: Path attatched to DNS of application ex. /hola
+    Type: String
+    Description: Path attached to the DNS of the application, e.g., /hola
   DesiredTaskValue:
     Type: Number
     Default: 0
   Listener:
-    Type: 'String'
-    Description: (ARN) of the listener.
+    Type: String
+    Description: ARN of the listener.
   ListenerRulePriority:
     Type: Number
-    Description: Enter new rule priority, this cannot replace a priorty rule.
+    Description: Enter a new rule priority; this cannot replace a priority rule.
   StrapiPostgresUser:
-    Type: 'String'
-    Description: 'Found in Strapi''s env file.'
+    Type: String
+    Description: Found in Strapi's env file.
   StrapiPostgresPassword:
-    Type: 'String'
-    Description: 'Found in Strapi''s env file.'
+    Type: String
+    Description: Found in Strapi's env file.
   StrapiPostgresDBName:
-    Type: 'String'
-    Description: 'Found in Strapi''s env file.'
+    Type: String
+    Description: Found in Strapi's env file.
   StrapiApiTokenSalt:
-    Type: 'String'
-    Description: 'Found in Strapi''s env file.'
+    Type: String
+    Description: Found in Strapi's env file.
   StrapiAppKey:
-    Type: 'String'
-    Description: 'Found in Strapi''s env file.'
+    Type: String
+    Description: Found in Strapi's env file.
   StrapiJwtSecret:
-    Type: 'String'
-    Description: 'Found in Strapi''s env file.'
+    Type: String
+    Description: Found in Strapi's env file.
   StrapiAdminJWTSecret:
-    Type: 'String'
-    Description: 'Found in Strapi''s env file.'
+    Type: String
+    Description: Found in Strapi's env file.
   StrapiPublicUrl:
-    Type: 'String'
-    Description: 'Found in Strapi''s env file.'
+    Type: String
+    Description: Found in Strapi's env file.
   WmdVpcId:
     Type: AWS::EC2::VPC::Id
     Description: A VPC that allows instances to access the Internet.
   RootDirectory:
     Type: String
     Default: "/my-custom-directory"
-    Description: Root directory for EFS
+    Description: Root directory for EFS.
 
 Conditions:
-  ProdEnvironment: !Equals 
+  ProdEnvironment: !Equals
     - !Ref EnvType
     - prod
 
 Resources:
-  StrapiECRRepo: 
+  StrapiECRRepo:
     Type: AWS::ECR::Repository
-    Properties: 
+    Properties:
       RepositoryName: !Ref AppName
-      ImageScanningConfiguration: 
-        ScanOnPush: 'true'
+      ImageScanningConfiguration:
+        scanOnPush: 'true'
       EncryptionConfiguration:
         EncryptionType: KMS
       # TODO: Define Lifecycle policy
+
   StrapiDbEfsAccessPoint:
     Type: 'AWS::EFS::AccessPoint'
     Properties:
-      FileSystemId: !If [ProdEnvironment, fs-0b98d8dfbef01082d, fs-0f38df377a61b730a]
+      FileSystemId: !If [ProdEnvironment, 'fs-0b98d8dfbef01082d', 'fs-0f38df377a61b730a']
       RootDirectory:
         CreationInfo:
           OwnerGid: 1000
           OwnerUid: 1000
-          Permissions: "0777"
+          Permissions: '0777'
         Path: !Sub "/${AppName}-db"
-      AccessPointTags: 
+      AccessPointTags:
         - Key: "Project"
           Value: !Ref AppName
         - Key: "Name"
           Value: !Sub "${AppName}-db"
         - Key: "ENV"
-          Value: !If [ProdEnvironment, Production, Integration]
+          Value: !If [ProdEnvironment, "Production", "Integration"]
+
   StrapiMediaEfsAccessPoint:
     Type: 'AWS::EFS::AccessPoint'
     Properties:
-      FileSystemId: !If [ProdEnvironment, fs-0b98d8dfbef01082d, fs-0f38df377a61b730a]
+      FileSystemId: !If [ProdEnvironment, 'fs-0b98d8dfbef01082d', 'fs-0f38df377a61b730a']
       RootDirectory:
         CreationInfo:
           OwnerGid: 1000
           OwnerUid: 1000
-          Permissions: "0777"
+          Permissions: '0777'
         Path: !Sub "/${AppName}-media"
-      AccessPointTags: 
+      AccessPointTags:
         - Key: "Project"
           Value: !Ref AppName
         - Key: "Name"
           Value: !Sub "${AppName}-media"
         - Key: "ENV"
-          Value: !If [ProdEnvironment, Production, Integration]
+          Value: !If [ProdEnvironment, "Production", "Integration"]
 
-  Type: Custom::EfsCustomResource
+  EfsCustomResource:
+    Type: Custom::EfsCustomResource
     Properties:
       ServiceToken: !GetAtt arn:aws-us-gov:lambda:us-gov-west-1:306251499781:function:RootDirectory_AutoAssign_Function
-      EfsFileSystemId: [fs-0b98d8dfbef01082d, fs-0f38df377a61b730a]
-      RootDirectory: "/my-custom-directory"
+      EfsFileSystemId: !If [ProdEnvironment, ['fs-0b98d8dfbef01082d', 'fs-0f38df377a61b730a'], 'fs-xxxxxxxx']
+      RootDirectory: !Ref RootDirectory
+
   StrapiEC2TargetGroup:
     Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
     Properties:
@@ -122,13 +127,14 @@ Resources:
       ProtocolVersion: 'HTTP1'
       TargetType: 'instance'
       VpcId: !Ref WmdVpcId
-      HealthCheckEnabled: True
+      HealthCheckEnabled: true
       HealthCheckPath: '/healthCheck'
       HealthCheckPort: 'traffic-port'
       HealthCheckProtocol: 'HTTPS'
       HealthCheckIntervalSeconds: 30
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 5
+
   StrapiALBListenerRule:
     Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
     Properties:
@@ -141,11 +147,12 @@ Resources:
             Values:
               - !Ref AppDnsValue
         - Field: path-pattern
-          PathPatternConfig: 
+          PathPatternConfig:
             Values:
               - !Ref AppPathValue
       ListenerArn: !Ref Listener
       Priority: !Ref ListenerRulePriority
+
   StrapiECSTaskDefinition:
     Type: 'AWS::ECS::TaskDefinition'
     Properties:
@@ -173,6 +180,7 @@ Resources:
               awslogs-region: us-gov-west-1
               awslogs-stream-prefix: ecs
               awslogs-create-group: true
+
         - Name: db
           Image: '306251499781.dkr.ecr.us-gov-west-1.amazonaws.com/postgres:12.0-alpine'
           Cpu: 0
@@ -209,6 +217,7 @@ Resources:
             Interval: 15
             Timeout: 30
             Retries: 3
+
         - Name: strapi
           Image: !Sub '306251499781.dkr.ecr.us-gov-west-1.amazonaws.com/${AppName}:integ'
           Cpu: 0
@@ -250,7 +259,7 @@ Resources:
             - Name: DATABASE_USERNAME
               Value: !Ref StrapiPostgresUser
             - Name: NODE_ENV
-              Value: !If [ProdEnvironment, production, development]
+              Value: !If [ProdEnvironment, "production", "development"]
             - Name: DATABASE_PASSWORD
               Value: !Ref StrapiPostgresPassword
           MountPoints:
@@ -267,6 +276,7 @@ Resources:
               awslogs-region: us-gov-west-1
               awslogs-stream-prefix: ecs
               awslogs-create-group: true
+
       ExecutionRoleArn: 'arn:aws-us-gov:iam::306251499781:role/ecsTaskExecutionRole'
       TaskRoleArn: 'arn:aws-us-gov:iam::306251499781:role/ecsTaskExecutionRole'
       Family: !Sub '${AppName}-${EnvType}'
@@ -277,7 +287,7 @@ Resources:
       Volumes:
         - Name: DB
           EFSVolumeConfiguration:
-            FilesystemId: !If [ProdEnvironment, fs-0b98d8dfbef01082d, fs-0f38df377a61b730a]
+            FilesystemId: !If [ProdEnvironment, 'fs-0b98d8dfbef01082d', 'fs-0f38df377a61b730a']
             RootDirectory: /
             TransitEncryption: ENABLED
             AuthorizationConfig:
@@ -285,18 +295,19 @@ Resources:
               IAM: ENABLED
         - Name: Media
           EFSVolumeConfiguration:
-            FilesystemId: !If [ProdEnvironment, fs-0b98d8dfbef01082d, fs-0f38df377a61b730a]
+            FilesystemId: !If [ProdEnvironment, 'fs-0b98d8dfbef01082d', 'fs-0f38df377a61b730a']
             RootDirectory: /
             TransitEncryption: ENABLED
             AuthorizationConfig:
               AccessPointId: !Ref StrapiMediaEfsAccessPoint
               IAM: ENABLED
+
   StrapiECSServiceDefinition:
     Type: 'AWS::ECS::Service'
     DependsOn:
       - StrapiALBListenerRule
     Properties:
-      Cluster: !If [ProdEnvironment, wmd-prod-cluster , wmd-integ-cluster]
+      Cluster: !If [ProdEnvironment, 'wmd-prod-cluster', 'wmd-integ-cluster']
       TaskDefinition: !Ref "StrapiECSTaskDefinition"
       ServiceName: !Ref AppName
       SchedulingStrategy: "REPLICA"
@@ -308,5 +319,3 @@ Resources:
         - TargetGroupArn: !Ref StrapiEC2TargetGroup
           ContainerName: nginx
           ContainerPort: 443
-        
-        
