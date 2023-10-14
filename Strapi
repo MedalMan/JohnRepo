@@ -1,5 +1,3 @@
-
-Response
 {
   "errorType": "Runtime.ImportModuleError",
   "errorMessage": "Error: Cannot find module 'index'\nRequire stack:\n- /var/runtime/index.mjs",
