@@ -1,2 +1,2 @@
-Template error: if specifying one argument to Fn::GetAtt, that argument must be a non-empty string in format <LogicalId>.<Attribute>
+Template error: Fn::If requires a list argument with three elements
 
