@@ -1,29 +1,15 @@
 import os
-import boto3
 import json
-
-def lambda_handler(event, context):
-    # Ensure the Lambda function is invoked by CloudFormation
-    if 'ResourceProperties' not in event:
-        return
-
-    # Get the EFS file system ID from CloudFormation input
-    efs_file_system_id = event['ResourceProperties']['EfsFileSystemId']
-    root_directory = event['ResourceProperties']['RootDirectory']
-
-    # Initialize the EFS client
-    efs_client = boto3.client('efs')
-import os
-import json
-import boto3
 import cfnresponse
+
+import boto3
 
 def lambda_handler(event, context):
     # Initialize CloudFormation response object
     response = cfnresponse.CustomResourceResponse(event)
 
     try:
-        # Get the necessary properties from the CloudFormation custom resource event
+        # Fetch the necessary properties from the CloudFormation custom resource event
         efs_fs_id = event['ResourceProperties']['EfsFileSystemId']
         root_directory = event['ResourceProperties']['RootDirectory']
         region = os.environ.get('AWS_REGION')  # Fetch the region from Lambda environment
@@ -31,7 +17,7 @@ def lambda_handler(event, context):
         # Create an EFS client
         efs_client = boto3.client('efs', region_name=region)
 
-        # Set the root directory for the EFS file system
+        # Set the root directory of the EFS file system
         efs_client.update_file_system(
             FileSystemId=efs_fs_id,
             CreationToken='root-directory-setup',  # Unique string to identify the request
@@ -65,39 +51,3 @@ if __name__ == '__main__':
     }
     context = None
     lambda_handler(event, context)
-
-    # Create the EFS access point
-    access_point = efs_client.create_access_point(
-        FileSystemId=efs_file_system_id,
-        RootDirectory={
-            'Path': root_directory
-        },
-        PosixUser={
-            'Uid': '1000',
-            'Gid': '1000'
-        },
-        Tags=[
-            {
-                'Key': 'Name',
-                'Value': 'MyEFSAccessPoint'
-            }
-        ]
-    )
-
-    # Return the Access Point ID
-    return {
-        'AccessPointId': access_point['AccessPointId']
-    }
-
-# For testing purposes when running the Lambda function outside CloudFormation
-if __name__ == '__main__':
-    event = {
-        'ResourceProperties': {
-            'EfsFileSystemId': 'fs-0123456789abcdef0',  # Replace with your EFS file system ID
-            'RootDirectory': '/my-custom-directory'    # Replace with your desired root directory
-        }
-    }
-    result = lambda_handler(event, None)
-    print(json.dumps(result))
-
-REPORT RequestId: 6106a12f-53f4-4fb3-9953-b4c3f16aa858	Duration: 2535.83 ms	Billed Duration: 2536 ms	Memory Size: 128 MB	Max Memory Used: 17 MB
