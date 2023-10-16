@@ -1,25 +1,51 @@
-Response
-{
-  "errorType": "Runtime.ImportModuleError",
-  "errorMessage": "Error: Cannot find module 'index'\nRequire stack:\n- /var/runtime/index.mjs",
-  "trace": [
-    "Runtime.ImportModuleError: Error: Cannot find module 'index'",
-    "Require stack:",
-    "- /var/runtime/index.mjs",
-    "    at _loadUserApp (file:///var/runtime/index.mjs:997:17)",
-    "    at async UserFunction.js.module.exports.load (file:///var/runtime/index.mjs:1032:21)",
-    "    at async start (file:///var/runtime/index.mjs:1195:23)",
-    "    at async file:///var/runtime/index.mjs:1201:1"
-  ]
-}
+import os
+import boto3
+import json
 
-Function Logs
-2023-10-16T11:48:08.655Z	undefined	ERROR	Uncaught Exception 	{"errorType":"Runtime.ImportModuleError","errorMessage":"Error: Cannot find module 'index'\nRequire stack:\n- /var/runtime/index.mjs","stack":["Runtime.ImportModuleError: Error: Cannot find module 'index'","Require stack:","- /var/runtime/index.mjs","    at _loadUserApp (file:///var/runtime/index.mjs:997:17)","    at async UserFunction.js.module.exports.load (file:///var/runtime/index.mjs:1032:21)","    at async start (file:///var/runtime/index.mjs:1195:23)","    at async file:///var/runtime/index.mjs:1201:1"]}
-INIT_REPORT Init Duration: 228.09 ms	Phase: init	Status: error	Error Type: Runtime.ExitError
-2023-10-16T11:48:10.996Z	undefined	ERROR	Uncaught Exception 	{"errorType":"Runtime.ImportModuleError","errorMessage":"Error: Cannot find module 'index'\nRequire stack:\n- /var/runtime/index.mjs","stack":["Runtime.ImportModuleError: Error: Cannot find module 'index'","Require stack:","- /var/runtime/index.mjs","    at _loadUserApp (file:///var/runtime/index.mjs:997:17)","    at async UserFunction.js.module.exports.load (file:///var/runtime/index.mjs:1032:21)","    at async start (file:///var/runtime/index.mjs:1195:23)","    at async file:///var/runtime/index.mjs:1201:1"]}
-INIT_REPORT Init Duration: 2495.03 ms	Phase: invoke	Status: error	Error Type: Runtime.ExitError
-START RequestId: 6106a12f-53f4-4fb3-9953-b4c3f16aa858 Version: $LATEST
-Unknown application error occurred
-Runtime.ImportModuleError
-END RequestId: 6106a12f-53f4-4fb3-9953-b4c3f16aa858
+def lambda_handler(event, context):
+    # Ensure the Lambda function is invoked by CloudFormation
+    if 'ResourceProperties' not in event:
+        return
+
+    # Get the EFS file system ID from CloudFormation input
+    efs_file_system_id = event['ResourceProperties']['EfsFileSystemId']
+    root_directory = event['ResourceProperties']['RootDirectory']
+
+    # Initialize the EFS client
+    efs_client = boto3.client('efs')
+
+    # Create the EFS access point
+    access_point = efs_client.create_access_point(
+        FileSystemId=efs_file_system_id,
+        RootDirectory={
+            'Path': root_directory
+        },
+        PosixUser={
+            'Uid': '1000',
+            'Gid': '1000'
+        },
+        Tags=[
+            {
+                'Key': 'Name',
+                'Value': 'MyEFSAccessPoint'
+            }
+        ]
+    )
+
+    # Return the Access Point ID
+    return {
+        'AccessPointId': access_point['AccessPointId']
+    }
+
+# For testing purposes when running the Lambda function outside CloudFormation
+if __name__ == '__main__':
+    event = {
+        'ResourceProperties': {
+            'EfsFileSystemId': 'fs-0123456789abcdef0',  # Replace with your EFS file system ID
+            'RootDirectory': '/my-custom-directory'    # Replace with your desired root directory
+        }
+    }
+    result = lambda_handler(event, None)
+    print(json.dumps(result))
+
 REPORT RequestId: 6106a12f-53f4-4fb3-9953-b4c3f16aa858	Duration: 2535.83 ms	Billed Duration: 2536 ms	Memory Size: 128 MB	Max Memory Used: 17 MB
