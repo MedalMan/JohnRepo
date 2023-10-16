@@ -13,6 +13,58 @@ def lambda_handler(event, context):
 
     # Initialize the EFS client
     efs_client = boto3.client('efs')
+import os
+import json
+import boto3
+import cfnresponse
+
+def lambda_handler(event, context):
+    # Initialize CloudFormation response object
+    response = cfnresponse.CustomResourceResponse(event)
+
+    try:
+        # Get the necessary properties from the CloudFormation custom resource event
+        efs_fs_id = event['ResourceProperties']['EfsFileSystemId']
+        root_directory = event['ResourceProperties']['RootDirectory']
+        region = os.environ.get('AWS_REGION')  # Fetch the region from Lambda environment
+
+        # Create an EFS client
+        efs_client = boto3.client('efs', region_name=region)
+
+        # Set the root directory for the EFS file system
+        efs_client.update_file_system(
+            FileSystemId=efs_fs_id,
+            CreationToken='root-directory-setup',  # Unique string to identify the request
+            LifeCycleState='after_2_3_day',
+            RootDirectory={
+                'Path': root_directory,
+                'CreationInfo': {
+                    'OwnerGid': 0,  # Update with the desired GID
+                    'OwnerUid': 0,  # Update with the desired UID
+                    'Permissions': '755'  # Update with the desired permissions
+                }
+            }
+        )
+
+        # Send a success signal to CloudFormation
+        response.send(event, context, cfnresponse.SUCCESS, {}, physicalResourceId=efs_fs_id)
+
+    except Exception as e:
+        print(f"Error: {str(e)}")
+
+        # Send a failure signal to CloudFormation
+        response.send(event, context, cfnresponse.FAILED, {})
+
+if __name__ == '__main__':
+    # This code will execute when testing the Lambda function locally.
+    event = {
+        "ResourceProperties": {
+            "EfsFileSystemId": "your-efs-file-system-id",
+            "RootDirectory": "/your-custom-root-directory"
+        }
+    }
+    context = None
+    lambda_handler(event, context)
 
     # Create the EFS access point
     access_point = efs_client.create_access_point(
