@@ -1,8 +1,6 @@
 {
-  "errorMessage": "Syntax error in module 'lambda_function': leading zeros in decimal integer literals are not permitted; use an 0o prefix for octal integers (lambda_function.py, line 30)",
-  "errorType": "Runtime.UserCodeSyntaxError",
-  "requestId": "7f5cdfce-ed53-4fed-ba77-5f5545a29b7b",
-  "stackTrace": [
-    "  File \"/var/task/lambda_function.py\" Line 30\n                        'Permissions': 0777"
-  ]
+  "errorMessage": "Unable to import module 'lambda_function': No module named 'cfnresponse'",
+  "errorType": "Runtime.ImportModuleError",
+  "requestId": "1b834052-e7ce-4146-8158-995533662d96",
+  "stackTrace": []
 }
