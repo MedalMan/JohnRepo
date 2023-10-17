@@ -1,1 +1,41 @@
-pip install cfresponse --trusted-host pypi.python.org --trusted-host pypi.org --trusted-host=files.pythonhosted.org
+import cfnresponse
+import os
+import boto3
+import json
+
+def lambda_handler(event, context):
+    # Initialize the CloudFormation response object
+    response = cfnresponse.FAILED
+    physical_resource_id = None
+    try:
+        # Get parameters from the CloudFormation event
+        efs_filesystem_id = event['ResourceProperties']['EFSFileSystemId']
+        root_directory = event['ResourceProperties']['RootDirectory']
+
+        # Create an EFS client
+        efs_client = boto3.client('efs')
+
+        # Set the root directory of the EFS file system
+        efs_client.update_file_system(
+            FileSystemId=efs_filesystem_id,
+            CreationToken='root-directory-setup',  # Unique string to identify the request
+            LifeCycleState='after_2_3_day',
+            RootDirectory={
+                'Path': root_directory,
+                'CreationInfo': {
+                    'OwnerGid': 0,  # Update with the desired GID
+                    'OwnerUid': 0,  # Update with the desired UID
+                    'Permissions': '755'  # Update with the desired permissions
+                }
+            }
+        )
+
+        response = cfnresponse.SUCCESS
+        physical_resource_id = efs_filesystem_id
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+    finally:
+        cfnresponse.send(event, context, response, {}, physical_resource_id)
+
