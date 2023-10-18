@@ -1,40 +1,9 @@
-import os
-import cfnresponse
-import boto3
-
-def lambda_handler(event, context):
-    # Initialize CloudFormation response object
-    response = cfnresponse.CustomResourceResponse(event)
-
-    try:
-        # Fetch the necessary properties from the CloudFormation custom resource event
-        efs_fs_id = event['ResourceProperties']['EfsFileSystemId']
-        root_directory = event['ResourceProperties']['RootDirectory']
-        region = event['ResourceProperties']['Region']  # Update with the parameter name
-
-        # Create an EFS client
-        efs_client = boto3.client('efs', region_name=region)
-
-        # Set the root directory of the EFS file system
-        efs_client.update_file_system(
-            FileSystemId=efs_fs_id,
-            CreationToken='root-directory-setup',  # Unique string to identify the request
-            LifeCycleState='after_2_3_day',
-            RootDirectory={
-                'Path': root_directory,
-                'CreationInfo': {
-                    'OwnerGid': 1000,
-                    'OwnerUid': 1000,
-                    'Permissions': '00777'
-                }
+"volumes": [
+        {
+            "name": "efs-html",
+            "efsVolumeConfiguration": {
+                "fileSystemId": "fs-1324abcd",
+                "transitEncryption": "ENABLED"
             }
-        )
-
-        # Send a success signal to CloudFormation
-        response.send(event, context, cfnresponse.SUCCESS, {}, physicalResourceId=efs_fs_id)
-
-    except Exception as e:
-        print(f"Error: {str(e)}")
-
-        # Send a failure signal to CloudFormation
-        response.send(event, context, cfnresponse.FAILED, {})
+        }
+    ],
