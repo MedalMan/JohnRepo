@@ -1,6 +1,53 @@
-{
-  "errorMessage": "Unable to import module 'lambda_function': No module named 'cfnresponse'",
-  "errorType": "Runtime.ImportModuleError",
-  "requestId": "1b834052-e7ce-4146-8158-995533662d96",
-  "stackTrace": []
-}
+import os
+import json
+import cfnresponse
+
+import boto3
+
+def lambda_handler(event, context):
+    # Initialize CloudFormation response object
+    response = cfnresponse.CustomResourceResponse(event)
+
+    try:
+        # Fetch the necessary properties from the CloudFormation custom resource event
+        efs_fs_id = event['ResourceProperties'][ProdEnvironment, 'fs-0b98d8dfbef01082d', 'fs-0f38df377a61b730a']
+        root_directory = event['ResourceProperties']['RootDirectory']
+        region = os.environ.get('us-gov-west-1') 
+
+        # Create an EFS client
+        efs_client = boto3.client('efs', region_name=region)
+
+        # Set the root directory of the EFS file system
+        efs_client.update_file_system(
+            FileSystemId=efs_fs_id,
+            CreationToken='root-directory-setup',  # Unique string to identify the request
+            LifeCycleState='after_2_3_day',
+            RootDirectory={
+                'Path': root_directory,
+                'CreationInfo': {
+                    'OwnerGid': 1000,
+                    'OwnerUid': 1000,
+                    'Permissions': '00777'
+                }
+            }
+        )
+
+        # Send a success signal to CloudFormation
+        response.send(event, context, cfnresponse.SUCCESS, {}, physicalResourceId=efs_fs_id)
+
+    except Exception as e:
+        print(f"Error: {str(e)}")
+
+        # Send a failure signal to CloudFormation
+        response.send(event, context, cfnresponse.FAILED, {})
+
+if __name__ == '__main__':
+    # This code will execute when testing the Lambda function locally.
+    event = {
+        "ResourceProperties": {
+            "EfsFileSystemId": ['ProdEnvironment', 'fs-0b98d8dfbef01082d', 'fs-0f38df377a61b730a'],
+            "RootDirectory": "/RootDirectory"
+        }
+    }
+    context = None
+    lambda_handler(event, context)
