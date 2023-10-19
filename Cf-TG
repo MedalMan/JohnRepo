@@ -1,9 +1,1 @@
-"volumes": [
-        {
-            "name": "efs-html",
-            "efsVolumeConfiguration": {
-                "fileSystemId": "fs-1324abcd",
-                "transitEncryption": "ENABLED"
-            }
-        }
-    ],
+An error occurred (ValidationError) when calling the CreateChangeSet operation: Stack:arn:aws-us-gov:cloudformation:[MASKED]:[MASKED]:stack/Strapi-CF-Stack/95b9cdb0-66e5-11ee-b738-02431ec3336a is in ROLLBACK_COMPLETE state and can not be updated.
