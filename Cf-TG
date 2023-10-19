@@ -1,1 +1,1 @@
-cf-strapi-${CI_BRANCH_NAME}
+An error occurred (ValidationError) when calling the CreateChangeSet operation: [/Resources/StrapiECSServiceDefinition/Type/LoadBalancers/0/ContainerPort] 'null' values are not allowed in templates
