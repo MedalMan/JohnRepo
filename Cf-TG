@@ -1,12 +1,4 @@
-json
-Copy code
-"Conditions": {
-    "ProdEnvironment": {
-        "Fn::Equals": [
-            {
-                "Ref": "EnvType"
-            },
-            "prod"
-        ]
-    }
-}
+Conditions:
+  ProdEnvironment: !Equals 
+    - !Ref EnvType
+    - prod
