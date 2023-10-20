@@ -2,35 +2,30 @@ stages:
   - validate
   - deploy
   - rollback
- 
-
 
 ##### Validate #####
 
 validate:
-    stage: validate
-    image: 
-      name:  lmregistry.us.lmco.com/lmc.eo.swf.lmified/ext.hub.docker.com/bitnami/aws-cli:latest
-      entrypoint:
-       - ""
-    script:
-      - echo "Hi"
+  stage: validate
+  image:
+    name: lmregistry.us.lmco.com/lmc.eo.swf.lmified/ext.hub.docker.com/bitnami/aws-cli:latest
+    entrypoint: [""]
+  script:
+    - echo "Hi"
 
 ##### Deploy #####
 
 deploy:
   stage: deploy
-  image: 
-      name:  lmregistry.us.lmco.com/lmc.eo.swf.lmified/ext.hub.docker.com/bitnami/aws-cli:latest
-      entrypoint:
-       - ""
+  image:
+    name: lmregistry.us.lmco.com/lmc.eo.swf.lmified/ext.hub.docker.com/bitnami/aws-cli:latest
+    entrypoint: [""]
   variables:
-    stackName: cf-strapi-${CI_BRANCH_NAME}
+    stackName: cf-strapi-${CI_COMMIT_REF_NAME} # Use CI_COMMIT_REF_NAME instead of CI_BRANCH_NAME
   script:
     - aws cloudformation deploy --template-file strapi-cf.yml --parameter-overrides file://parameters.json --stack-name $stackName
 
-
-##### rollback#####
+##### Rollback #####
 
 rollback_cloudformation:
   stage: rollback
