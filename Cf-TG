@@ -1,41 +1,4 @@
-{
-    "AWSTemplateFormatVersion": "2010-09-09",
-    "Parameters": {
-        "EnvType": "integ",
-            
-        "AppName": "test-strapi",
-        
-        "AppDnsValue": "veterans.lmaero.lmco.com",
-
-        "AppPathValue": "/strapiTest*",
-            
-        "DesiredTaskValue": "0",
-        
-        "Listener": "arn:aws-us-gov:elasticloadbalancing:us-gov-west-1:306251499781:listener/app/lb-aero-veterans/4a1c5b3aa4099e62/b252c5d20b4803b1",
-    
-        "ListenerRulePriority": "5",
-        
-        "StrapiPostgresUser": "strapi",
-
-        "StrapiPostgresPassword": "strapi",
-        
-        "StrapiPostgresDBName": "strapi",
-
-        "StrapiApiTokenSalt": "0123456",
-
-        "StrapiAppKey": "0123456",
-
-        "StrapiJwtSecret": "0123456",
-
-        "StrapiAdminJWTSecret": "0123456",
-
-        "StrapiPublicUrl": "https://veterans.lmaero.lmco.com/strapiTest/",
-
-        "WmdVpcId": "vpc-034c7c66",
-
-        "RootDirectory": "/my-custom-directory",
-
-        "ProdEnvironment": "integ"
-            
-        }
-    }
+Conditions:
+  ProdEnvironment: !Equals 
+    - !Ref EnvType
+    - prod
