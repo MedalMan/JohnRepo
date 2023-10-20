@@ -1,1 +1,40 @@
-/usr/bin/bash: line 154: aws: command not found
+before_script:
+  - yum update -y
+  - yum install -y aws-cli
+  # Add more package installations if required
+
+stages:
+  - validate
+  - deploy
+  - rollback
+
+##### Validate #####
+
+validate:
+  stage: validate
+  image:
+    name: lmregistry.us.lmco.com/lmc.eo.swf.lmified/ext.hub.docker.com/bitnami/aws-cli:latest
+    entrypoint: [""]
+  script:
+    - echo "Hi"
+
+##### Deploy #####
+
+deploy:
+  stage: deploy
+  image:
+    name: lmregistry.us.lmco.com/lmc.eo.swf.lmified/ext.hub.docker.com/bitnami/aws-cli:latest
+    entrypoint: [""]
+  variables:
+    stackName: cf-strapi-${CI_COMMIT_REF_NAME} # Use CI_COMMIT_REF_NAME instead of CI_BRANCH_NAME
+  script:
+    - aws --version
+    - aws cloudformation deploy --template-file strapi-cf.yml --parameter-overrides file://parameters.json --stack-name $stackName
+
+##### Rollback #####
+
+rollback_cloudformation:
+  stage: rollback
+  script:
+    - aws cloudformation delete-stack --stack-name $stackName
+  when: on_failure
