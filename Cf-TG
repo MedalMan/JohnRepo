@@ -1,8 +1,2 @@
-"Conditions": {
-    "ProdEnvironment": {
-        "Fn::Equals": [
-            { "Ref": "EnvType" },
-            "prod"
-        ]
-    }
-}
+git@gitlab.us.lmco.com: Permission denied (publickey,gssapi-keyex,gssapi-with-mic).
+fatal: Could not read from remote repository.
