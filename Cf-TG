@@ -1,3 +1,7 @@
-deploy_cloudformation:
+rollback_cloudformation:
+  stage: rollback
   script:
-    - aws cloudformation create-stack --stack-name MyStack --template-body file://my-stack-template.yml --parameters file://my-parameters.json --capabilities CAPABILITY_NAMED_IAM --on-failure DELETE
+    - aws cloudformation delete-stack --stack-name MyStack
+  only:
+    - master
+  when: on_failure
