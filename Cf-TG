@@ -1,3 +1,8 @@
+Template contains errors.: Template format error: At least one Resources member must be defined.
+
+
+
+
 AWSTemplateFormatVersion: 2010-09-09
 Parameters:
   EnvType: 
