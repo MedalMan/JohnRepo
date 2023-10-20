@@ -1,7 +1,39 @@
+stages:
+  - validate
+  - deploy
+  - rollback
+ 
+
+
+##### Validate #####
+
+validate:
+    stage: validate
+    image: 
+      name:  lmregistry.us.lmco.com/lmc.eo.swf.lmified/ext.hub.docker.com/bitnami/aws-cli:latest
+      entrypoint:
+       - ""
+    script:
+      - echo "Hi"
+
+##### Deploy #####
+
+deploy:
+  stage: deploy
+  image: 
+      name:  lmregistry.us.lmco.com/lmc.eo.swf.lmified/ext.hub.docker.com/bitnami/aws-cli:latest
+      entrypoint:
+       - ""
+  variables:
+    stackName: cf-strapi-${CI_BRANCH_NAME}
+  script:
+    - aws cloudformation deploy --template-file strapi-cf.yml --parameter-overrides file://parameters.json --stack-name $stackName
+
+
+##### rollback#####
+
 rollback_cloudformation:
   stage: rollback
   script:
-    - aws cloudformation delete-stack --stack-name MyStack
-  only:
-    - master
+    - aws cloudformation delete-stack --stack-name $stackName
   when: on_failure
