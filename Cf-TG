@@ -1,1 +1,63 @@
 An error occurred (ValidationError) when calling the CreateChangeSet operation: Stack:arn:aws-us-gov:cloudformation:[MASKED]:[MASKED]:stack/cf-strapi/5174b3d0-6eb6-11ee-b0c3-061a838133f2 is in ROLLBACK_FAILED state and can not be updated.
+
+
+Resources:
+  StrapiECRRepo: 
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: !Ref AppName
+      ImageScanningConfiguration: 
+        ScanOnPush: 'true'
+      EncryptionConfiguration:
+        EncryptionType: KMS
+      # TODO: Define Lifecycle policy
+  StrapiDbEfsAccessPoint:
+    Type: 'AWS::EFS::AccessPoint'
+    Properties:
+      FileSystemId: !If [ProdEnvironment, fs-0b98d8dfbef01082d, fs-0f38df377a61b730a]
+      RootDirectory:
+        CreationInfo:
+          OwnerGid: 1000
+          OwnerUid: 1000
+          Permissions: "0777"
+        Path: !Sub "/${AppName}-db"
+      AccessPointTags: 
+        - Key: "Project"
+          Value: !Ref AppName
+        - Key: "Name"
+          Value: !Sub "${AppName}-db"
+        - Key: "ENV"
+          Value: !If [ProdEnvironment, Production, Integration]
+  StrapiMediaEfsAccessPoint:
+    Type: 'AWS::EFS::AccessPoint'
+    Properties:
+      FileSystemId: !If [ProdEnvironment, fs-0b98d8dfbef01082d, fs-0f38df377a61b730a]
+      RootDirectory:
+        CreationInfo:
+          OwnerGid: 1000
+          OwnerUid: 1000
+          Permissions: "0777"
+        Path: !Sub "/${AppName}-media"
+      AccessPointTags: 
+        - Key: "Project"
+          Value: !Ref AppName
+        - Key: "Name"
+          Value: !Sub "${AppName}-media"
+        - Key: "ENV"
+          Value: !If [ProdEnvironment, Production, Integration]
+  StrapiEC2TargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Name: !Sub 'ecs-${EnvType}-${AppName}'
+      Port: 443
+      Protocol: 'HTTPS'
+      ProtocolVersion: 'HTTP1'
+      TargetType: 'instance'
+      VpcId: !Ref WmdVpcId
+      HealthCheckEnabled: True
+      HealthCheckPath: '/healthCheck'
+      HealthCheckPort: 'traffic-port'
+      HealthCheckProtocol: 'HTTPS'
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
