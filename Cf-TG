@@ -1,4 +1,2 @@
-sudo openssl x509 -noout -dates -in /etc/ssl/certs/ca-certificates.crt
-
-Get-ChildItem -Path Cert:\LocalMachine\My
-
+ SSL connect error for https://rhui.us-west-2.aws.ce.redhat.com/pulp/mirror/content/dist/rhel9/rhui/9/x86_64/appstream/os [OpenSSL SSL_connect: Connection reset by peer in connection to rhui.us-west-2.aws.ce.redhat.com:443 ]
+Error: Failed to download metadata for repo 'rhel-9-appstream-rhui-rpms': Cannot prepare internal mirrorlist: Curl error (35): SSL connect error for https://rhui.us-west-2.aws.ce.redhat.com/pulp/mirror/content/dist/rhel9/rhui/9/x86_64/appstream/os [OpenSSL SSL_connect: Connection reset by peer in connection to rhui.us-west-2.aws.ce.redhat.com:443 ]
