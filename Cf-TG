@@ -1,84 +1,29 @@
-variables:
-  AWS_DOCKER_REGISTRY_IMAGE: $CI_DOCKER_REGISTRY_IMAGE_NAME
-  AWS_ECR_REGISTRY: "$CI_AWS_ECR_REGISTRY"
-  AWS_ECS_REGION: us-gov-west-1
-  AWS_ECS_CLUSTER: $CI_ECS_CLUSTER
-  AWS_ECS_SERVICE_NAME: $CI_ECS_SERVICE_NAME
-  NGINX_IMAGE: $CI_NGINX_IMAGE
-  NODE_IMAGE: $CI_NODE_IMAGE
-  IMAGE_TAG: $CI_IMAGE_TAG
-  BUILD_VERSION: $CI_PIPELINE_IID
-
-stages:
-  - package
-  - deploy
-
-####### Common Pipeline Code #######
-.job_template: &docker_ecr_config
-  before_script:
-    - mkdir -p $HOME/.docker
-    - echo "$DOCKER_ECR_AUTH_CONFIG" >> "$HOME/.docker/config.json"
-  after_script:
-    - rm -f $HOME/.docker/config.json
-
-.package_docker_image:
-  stage: package
-  tags:
-    - wmd-react
-    - shell
-  <<: *docker_ecr_config
+validate:
+  stage: validate
+  image:
+    name: lmregistry.us.lmco.com/lmc.eo.swf.lmified/ext.hub.docker.com/bitnami/aws-cli:latest
+    entrypoint: [""]
   script:
-    - mkdir -p nginx/ssl/certs/
-    - cp $SCM_PEM nginx/ssl/certs/scm.pem
-    - cp $SCM_KEY nginx/ssl/certs/scm.key
-    - mv templates/nginx.conf nginx/ 
-    - touch .env
-    - cp $ENV_FILE .env
-    - envsubst < templates/Dockerfile-strapi > Dockerfile
-    - envsubst < templates/Dockerfile-nginx > nginx/Dockerfile
+    - echo "Hi"
 
-    # Build NGINX and Strapi images
-    - docker build -t $AWS_ECR_REGISTRY/$AWS_DOCKER_REGISTRY_IMAGE:nginx-$CI_IMAGE_TAG -t $AWS_ECR_REGISTRY/$AWS_DOCKER_REGISTRY_IMAGE:nginx-$CI_IMAGE_TAG-$BUILD_VERSION ./nginx
-    - docker build -t $AWS_ECR_REGISTRY/$AWS_DOCKER_REGISTRY_IMAGE:$CI_IMAGE_TAG -t $AWS_ECR_REGISTRY/$AWS_DOCKER_REGISTRY_IMAGE:$CI_IMAGE_TAG-$BUILD_VERSION .
-    - docker push --all-tags $AWS_ECR_REGISTRY/$AWS_DOCKER_REGISTRY_IMAGE
-    - docker image prune -f
-    - docker image ls
+##### Deploy #####
 
-.deploy_update:
+deploy:
   stage: deploy
-  tags:
-    - wmd-react
-    - shell
+  image:
+    name: lmregistry.us.lmco.com/lmc.eo.swf.lmified/ext.hub.docker.com/bitnami/aws-cli:latest
+    entrypoint: [""]
+  variables:
+    stackName: cf-strapi-${CI_COMMIT_REF_NAME} # Use CI_COMMIT_REF_NAME instead of CI_BRANCH_NAME
   script:
-    - aws ecs update-service --cluster $AWS_ECS_CLUSTER --service $AWS_ECS_SERVICE_NAME --region $AWS_ECS_REGION --force-new-deployment --no-verify-ssl
-    - aws ecs wait services-stable --cluster $AWS_ECS_CLUSTER --service $AWS_ECS_SERVICE_NAME --no-verify-ssl
+    - aws --version
+    - aws cloudformation deploy --template-file strapi-cf.yml --parameter-overrides file://parameters.json --stack-name $stackName
 
+##### Rollback #####
 
+rollback_cloudformation:
+  stage: rollback
+  script:
+    - aws cloudformation delete-stack --stack-name $stackName
+  when: on_failure
 
-#######  Integration Pipeline  #######
-build-integ:
-  environment: integration
-  extends: .package_docker_image
-  only:
-    - integration
-  retry: 0
-
-deploy-integ:
-  environment: integration
-  extends: .deploy_update
-  only:
-    - integration
-
-#######  Production Jobs  #######
-build-prod:
-  environment: production
-  extends: .package_docker_image
-  only:
-    - production
-
-deploy-prod:
-  environment: production
-  extends: .deploy_update
-  only:
-    - production
-  when: manual
