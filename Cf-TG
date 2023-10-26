@@ -1,1 +1,1 @@
-mv: missing destination file operand after '/usr/local/share/ca-certificates/Combined_pem.pem'
+mv [OPTION]... [-T] SOURCE DEST
