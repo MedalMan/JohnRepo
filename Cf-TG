@@ -1,2 +1,10 @@
-mv: cannot move 'Combined_pem.pem' to '/usr/local/share/ca-certificates/': Not a directory 
- 
+===================
+INSTALLATION ERROR!
+===================
+Installation step failed - exiting.
+Check for error messages in the install log (install.log).
+
+If you require assistance in resolving the issue, please include install.log
+in your communications with Nagios XI technical support.
+
+The script that failed was: './0-repos'
