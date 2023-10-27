@@ -1,10 +1,8 @@
-===================
-INSTALLATION ERROR!
-===================
-Installation step failed - exiting.
-Check for error messages in the install log (install.log).
+Configuring Repos...
+Repositories disabled by configuration.
+ERROR: Please add the 'codeready-builder' repo to your Red Hat systems subscriptions.
+       You can do so with the following command:
+       subscription-manager repos --enable <repo name>
 
-If you require assistance in resolving the issue, please include install.log
-in your communications with Nagios XI technical support.
-
-The script that failed was: './0-repos'
+       You can list all repos available to you to find the codeready-builder by running:
+       subscription-manager repos
