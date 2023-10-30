@@ -1,4 +1,0 @@
- https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.4.6.tar.gz
-Resolving assets.nagios.com (assets.nagios.com)... 45.79.49.120, 2600:3c00::f03c:92ff:fef7:45ce
-Connecting to assets.nagios.com (assets.nagios.com)|45.79.49.120|:443...  failed: Connection timed out.
-Connecting to assets.nagios.com (assets.nagios.com)|2600:3c00::f03c:92ff:fef7:45ce|:443... failed: Network is unreachable.

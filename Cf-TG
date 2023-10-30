@@ -1,8 +1,0 @@
-Configuring Repos...
-Repositories disabled by configuration.
-ERROR: Please add the 'codeready-builder' repo to your Red Hat systems subscriptions.
-       You can do so with the following command:
-       subscription-manager repos --enable <repo name>
-
-       You can list all repos available to you to find the codeready-builder by running:
-       subscription-manager repos
