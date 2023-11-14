@@ -12,3 +12,9 @@ http://<your_ec2_instance_public_ip>:8000
 
 
 wget -O splunk-<version>-<build>-Linux-x86_64.tgz https://www.splunk.com/download/some-link-to-splunk-package
+
+
+gzip: stdin: unexpected end of file
+tar: Child returned status 1
+tar: Error is not recoverable: exiting now
+[root@ec2lm-02abb75e5 ec2-user]#
