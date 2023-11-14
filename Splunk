@@ -9,3 +9,7 @@ cd splunk
 
 
 http://<your_ec2_instance_public_ip>:8000
+
+
+Proxy request sent, awaiting response... 503 Service Unavailable
+2023-11-14 15:02:07 ERROR 503: Service Unavailable.
