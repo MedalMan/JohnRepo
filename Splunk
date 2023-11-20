@@ -7,7 +7,6 @@ sudo mkdir /mnt/snapshot
 sudo mount /dev/xvdf /mnt/snapshot
 
 
-An error occurred (InvalidZone.NotFound) when calling the CreateVolume operation: The zone 'US-Gov-West-1' does not exist.An error occurred (InvalidZone.NotFound) when calling the CreateVolume operation: The zone 'US-Gov-West-1' does not exist.
-
+An error occurred (UnauthorizedOperation) when calling the CreateVolume operation: You are not authorized to perform this operation. User: arn:aws-us-gov:sts::306251499781:assumed-role/SC-306251499781-pp-d5yumvjeoqee4-Ec2IamRole-Q1N77GWOIUZY/i-0f85ce0a72d4b67ff is not authorized to perform: ec2:CreateVolume on resource: arn:aws-us-gov:ec2:us-gov-west-1:306251499781:volume/* because no identity-based policy allows the ec2:CreateVolume action. Encoded authorization failure message: 19-LpfPPo9HnBylnMaw4Q44WuHHushxTft0uKHxnN-wrQYjTi7g4JS1SbMRiiNDX8lAuH__tPFkarQjXCjNFi9KAochJNiuEMB0M20a27pGwFZtnJu3o8z24-B6GHes6imNAT6Mjhh7SsYE78VzhiZ4tsdyhXoxVpiHEaywUREF3ldqSENKPFBLvifdLzXxevDudFgjsush0AzsVopSy3Uh_JpizTDGYOt_nALjTN1gNbZcfSkJcHce90lB19Cd8c4GGqycXZVM9RD5qBaNZAc5ED1aBRyST5WXJpP3RjrdwQtBXjNEj7kFn60Db6rtKS-YChyHBZh163H0mOqmKNG0TJPK5pXA02wz7PYC_-PPLbDgH6XXfb1-35HbjnjD6ByEJcoq86uEJ0Alo03pxzE4hHusOjbY-RsjPWMiDaNbijhw0cfCy6KYYMn-7UlKi-qetn2aezgurlqspNeD2GSzCOTVE9eeRbaStthQU6t9t7ijdzRxMc78tfz1gMaqrTOUlxM-Y1itUxmWpe8NryTyhQsraqQJslKC7b9oXQ9JVQEI5BwLh4YTXTbIqZhsmoL0zCe4rX6FkYnQg4SwtusUe9-4VdCDy6dl-vlUIkVO2e9l1OSVhu0YMPLe-Wlk2638KXJDmdtGTcAsdstFUNi-bRWwWOCBSwdEhAGqQt4kWTcxGjdj9-0tqs_5qUXPunwrWFlTT0axpBwY
 Invoke-WebRequest -Uri https://awscli.amazonaws.com/AWSCLIV2.msi -OutFile AWSCLIV2.msi
 Start-Process msiexec.exe -Wait -ArgumentList '/I AWSCLIV2.msi'
