@@ -7,6 +7,10 @@ sudo mkdir /mnt/snapshot
 sudo mount /dev/xvdf /mnt/snapshot
 
 
+
+Invoke-WebRequest -Uri https://awscli.amazonaws.com/AWSCLIV2.msi -OutFile AWSCLIV2.msi
+Start-Process msiexec.exe -Wait -ArgumentList '/I AWSCLIV2.msi'
+
 {
 	"Version": "2012-10-17",
 	"Statement": [
@@ -113,7 +117,41 @@ sudo mount /dev/xvdf /mnt/snapshot
 				"arn:aws-us-gov:ssm:*:235911892930:automation-definition/LM-PostBuildTasks-Linux:*",
 				"arn:aws-us-gov:ssm:*:235911892930:automation-definition/LM-PostBuildTasks-Windows:*",
 				"arn:aws-us-gov:ssm:*:354399600810:document/LM-ConfigureRhel",
-				"arn:aws-us-gov:ssm:*:354399600810:automation-definition
-
-}Invoke-WebRequest -Uri https://awscli.amazonaws.com/AWSCLIV2.msi -OutFile AWSCLIV2.msi
-Start-Process msiexec.exe -Wait -ArgumentList '/I AWSCLIV2.msi'
+				"arn:aws-us-gov:ssm:*:354399600810:automation-definition/LM-PostBuildTasks-Linux:*",
+				"arn:aws-us-gov:ssm:*:354399600810:automation-definition/LM-PostBuildTasks-Windows:*"
+			],
+			"Effect": "Allow",
+			"Sid": "AllowSSMConstrainedActions"
+		},
+		{
+			"Action": [
+				"s3:PutObject",
+				"s3:PutObjectAcl"
+			],
+			"Resource": [
+				"arn:aws-us-gov:s3:::lm-ssm-data-306251499781-*/Logs/*"
+			],
+			"Effect": "Allow",
+			"Sid": "AllowSendLogsToS3"
+		},
+		{
+			"Condition": {
+				"StringLike": {
+					"kms:ViaService": "s3.*.amazonaws.com"
+				},
+				"ForAnyValue:StringEquals": {
+					"kms:ResourceAliases": "alias/AMI-Factory_SharedContent"
+				}
+			},
+			"Action": [
+				"kms:Decrypt"
+			],
+			"Resource": [
+				"arn:aws-us-gov:kms:*:354399600810:key/*",
+				"arn:aws-us-gov:kms:*:361198076654:key/*"
+			],
+			"Effect": "Allow",
+			"Sid": "AllowDecryptOnSharedContentKey"
+		}
+	]
+}
