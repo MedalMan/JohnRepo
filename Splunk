@@ -7,7 +7,7 @@ sudo mkdir /mnt/snapshot
 sudo mount /dev/xvdf /mnt/snapshot
 
 
-
+An error occurred (InvalidZone.NotFound) when calling the CreateVolume operation: The zone 'US-Gov-West-1' does not exist.An error occurred (InvalidZone.NotFound) when calling the CreateVolume operation: The zone 'US-Gov-West-1' does not exist.
 
 Invoke-WebRequest -Uri https://awscli.amazonaws.com/AWSCLIV2.msi -OutFile AWSCLIV2.msi
 Start-Process msiexec.exe -Wait -ArgumentList '/I AWSCLIV2.msi'
