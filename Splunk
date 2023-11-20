@@ -6,3 +6,8 @@ ssh -i /path/to/your/keyfile.pem ec2-user@your-ec2-instance-ip
 sudo mkdir /mnt/snapshot
 sudo mount /dev/xvdf /mnt/snapshot
 
+
+
+
+Invoke-WebRequest -Uri https://awscli.amazonaws.com/AWSCLIV2.msi -OutFile AWSCLIV2.msi
+Start-Process msiexec.exe -Wait -ArgumentList '/I AWSCLIV2.msi'
