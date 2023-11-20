@@ -6,6 +6,10 @@ ssh -i /path/to/your/keyfile.pem ec2-user@your-ec2-instance-ip
 sudo mkdir /mnt/snapshot
 sudo mount /dev/xvdf /mnt/snapshot
 
+Failed to save changes to policy .
+User: arn:aws-us-gov:sts::306251499781:assumed-role/aero.awsvc.radm/n0367f@us.lmco.com is not authorized to perform: iam:CreatePolicyVersion on resource: policy arn:aws-us-gov:iam::306251499781:policy/Custom-Policy-EC2IAMForSSM with an explicit deny in a service control policy
+
+
 
 
 Invoke-WebRequest -Uri https://awscli.amazonaws.com/AWSCLIV2.msi -OutFile AWSCLIV2.msi
