@@ -7,6 +7,147 @@ sudo mkdir /mnt/snapshot
 sudo mount /dev/xvdf /mnt/snapshot
 
 
-An error occurred (UnauthorizedOperation) when calling the CreateVolume operation: You are not authorized to perform this operation. User: arn:aws-us-gov:sts::306251499781:assumed-role/SC-306251499781-pp-d5yumvjeoqee4-Ec2IamRole-Q1N77GWOIUZY/i-0f85ce0a72d4b67ff is not authorized to perform: ec2:CreateVolume on resource: arn:aws-us-gov:ec2:us-gov-west-1:306251499781:volume/* because no identity-based policy allows the ec2:CreateVolume action. Encoded authorization failure message: 19-LpfPPo9HnBylnMaw4Q44WuHHushxTft0uKHxnN-wrQYjTi7g4JS1SbMRiiNDX8lAuH__tPFkarQjXCjNFi9KAochJNiuEMB0M20a27pGwFZtnJu3o8z24-B6GHes6imNAT6Mjhh7SsYE78VzhiZ4tsdyhXoxVpiHEaywUREF3ldqSENKPFBLvifdLzXxevDudFgjsush0AzsVopSy3Uh_JpizTDGYOt_nALjTN1gNbZcfSkJcHce90lB19Cd8c4GGqycXZVM9RD5qBaNZAc5ED1aBRyST5WXJpP3RjrdwQtBXjNEj7kFn60Db6rtKS-YChyHBZh163H0mOqmKNG0TJPK5pXA02wz7PYC_-PPLbDgH6XXfb1-35HbjnjD6ByEJcoq86uEJ0Alo03pxzE4hHusOjbY-RsjPWMiDaNbijhw0cfCy6KYYMn-7UlKi-qetn2aezgurlqspNeD2GSzCOTVE9eeRbaStthQU6t9t7ijdzRxMc78tfz1gMaqrTOUlxM-Y1itUxmWpe8NryTyhQsraqQJslKC7b9oXQ9JVQEI5BwLh4YTXTbIqZhsmoL0zCe4rX6FkYnQg4SwtusUe9-4VdCDy6dl-vlUIkVO2e9l1OSVhu0YMPLe-Wlk2638KXJDmdtGTcAsdstFUNi-bRWwWOCBSwdEhAGqQt4kWTcxGjdj9-0tqs_5qUXPunwrWFlTT0axpBwY
-Invoke-WebRequest -Uri https://awscli.amazonaws.com/AWSCLIV2.msi -OutFile AWSCLIV2.msi
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Action": "ec2:CreateTags",
+			           "ec2:CreateVolume",
+			"Resource": 
+			[
+				"arn:aws-us-gov:ec2:*:*:instance/*",
+				"arn:aws-us-gov:ec2:*::snapshot/*",
+				"arn:aws-us-gov:ec2:*:*:volume/*"
+			],
+			"Effect": "Allow",
+			"Sid": "AllowCreateEc2NameTag"
+		},
+		{
+			"Action": [
+				"cloudwatch:PutMetricData",
+				"ec2:Describe*",
+				"ec2:GetEbsEncryptionByDefault",
+				"ec2messages:AcknowledgeMessage",
+				"ec2messages:DeleteMessage",
+				"ec2messages:FailMessage",
+				"ec2messages:GetEndpoint",
+				"ec2messages:GetMessages",
+				"ec2messages:SendReply",
+				"logs:CreateLogGroup",
+				"logs:CreateLogStream",
+				"logs:DescribeLogGroups",
+				"logs:DescribeLogStreams",
+				"logs:PutLogEvents",
+				"s3:Get*",
+				"s3:List*",
+				"ssm:DescribeAssociation",
+				"ssm:DescribeAutomation*",
+				"ssm:DescribeDocument",
+				"ssm:GetAutomationExecution",
+				"ssm:GetCommandInvocation",
+				"ssm:GetDeployablePatchSnapshotForInstance",
+				"ssm:GetDocument",
+				"ssm:GetManifest",
+				"ssm:ListAssociations",
+				"ssm:ListCommandInvocations",
+				"ssm:ListCommands",
+				"ssm:ListInstanceAssociations",
+				"ssm:PutComplianceItems",
+				"ssm:PutConfigurePackageResult",
+				"ssm:PutInventory",
+				"ssm:UpdateAssociationStatus",
+				"ssm:UpdateInstanceAssociationStatus",
+				"ssm:UpdateInstanceInformation",
+				"ssmmessages:CreateControlChannel",
+				"ssmmessages:CreateDataChannel",
+				"ssmmessages:OpenControlChannel",
+				"ssmmessages:OpenDataChannel"
+			],
+			"Resource": "*",
+			"Effect": "Allow",
+			"Sid": "AllowUnconstrainedActions"
+		},
+		{
+			"Action": [
+				"kms:Encrypt",
+				"kms:Decrypt",
+				"kms:GenerateDataKey*",
+				"kms:DescribeKey"
+			],
+			"Resource": [
+				"arn:aws-us-gov:kms:*:306251499781:key/*"
+			],
+			"Effect": "Allow",
+			"Sid": "AllowUseOfLocalKmsKeys"
+		},
+		{
+			"Condition": {
+				"StringEquals": {
+					"iam:PassedToService": "ssm.amazonaws.com"
+				}
+			},
+			"Action": [
+				"iam:PassRole"
+			],
+			"Resource": [
+				"arn:aws-us-gov:iam::306251499781:role/lm-aws-service-role/ssm.amazonaws.com/lz.amifac.ssm.svc"
+			],
+			"Effect": "Allow",
+			"Sid": "AllowPassRoleToCustomSSMServiceRole"
+		},
+		{
+			"Action": [
+				"ssm:SendCommand",
+				"ssm:StartAutomationExecution"
+			],
+			"Resource": [
+				"arn:aws-us-gov:ec2:*:306251499781:instance/*",
+				"arn:aws-us-gov:s3:::lm-ssm-data-306251499781-*/Logs/*",
+				"arn:aws-us-gov:ssm:*::document/AWS-ConfigureAWSPackage",
+				"arn:aws-us-gov:ssm:*::document/AWS-RunPatchBaseline",
+				"arn:aws-us-gov:ssm:*:272725401866:document/LM-ConfigureRhel",
+				"arn:aws-us-gov:ssm:*:272725401866:automation-definition/LM-PostBuildTasks-Linux:*",
+				"arn:aws-us-gov:ssm:*:272725401866:automation-definition/LM-PostBuildTasks-Windows:*",
+				"arn:aws-us-gov:ssm:*:235911892930:document/LM-ConfigureRhel",
+				"arn:aws-us-gov:ssm:*:235911892930:automation-definition/LM-PostBuildTasks-Linux:*",
+				"arn:aws-us-gov:ssm:*:235911892930:automation-definition/LM-PostBuildTasks-Windows:*",
+				"arn:aws-us-gov:ssm:*:354399600810:document/LM-ConfigureRhel",
+				"arn:aws-us-gov:ssm:*:354399600810:automation-definition/LM-PostBuildTasks-Linux:*",
+				"arn:aws-us-gov:ssm:*:354399600810:automation-definition/LM-PostBuildTasks-Windows:*"
+			],
+			"Effect": "Allow",
+			"Sid": "AllowSSMConstrainedActions"
+		},
+		{
+			"Action": [
+				"s3:PutObject",
+				"s3:PutObjectAcl"
+			],
+			"Resource": [
+				"arn:aws-us-gov:s3:::lm-ssm-data-306251499781-*/Logs/*"
+			],
+			"Effect": "Allow",
+			"Sid": "AllowSendLogsToS3"
+		},
+		{
+			"Condition": {
+				"StringLike": {
+					"kms:ViaService": "s3.*.amazonaws.com"
+				},
+				"ForAnyValue:StringEquals": {
+					"kms:ResourceAliases": "alias/AMI-Factory_SharedContent"
+				}
+			},
+			"Action": [
+				"kms:Decrypt"
+			],
+			"Resource": [
+				"arn:aws-us-gov:kms:*:354399600810:key/*",
+				"arn:aws-us-gov:kms:*:361198076654:key/*"
+			],
+			"Effect": "Allow",
+			"Sid": "AllowDecryptOnSharedContentKey"
+		}
+	]
+}Invoke-WebRequest -Uri https://awscli.amazonaws.com/AWSCLIV2.msi -OutFile AWSCLIV2.msi
 Start-Process msiexec.exe -Wait -ArgumentList '/I AWSCLIV2.msi'
