@@ -1,20 +1,7 @@
-wget -O splunk-8.2.1-545206cc9f70-Linux-x86_64.tgz 'https://www.splunk.com/bin/splunk/DownloadActivityServlet?architecture=x86_64&platform=linux&version=8.2.1&product=splunk&filename=splunk-8.2.1-545206cc9f70-Linux-x86_64.tgz&wget=true'
+aws ec2 create-volume --snapshot-id your-snapshot-id --availability-zone your-availability-zone
+aws ec2 attach-volume --volume-id your-volume-id --instance-id your-instance-id --device /dev/sdf
+ssh -i /path/to/your/keyfile.pem ec2-user@your-ec2-instance-ip
 
+sudo mkdir /mnt/snapshot
+sudo mount /dev/xvdf /mnt/snapshot
 
-tar -zxvf splunk-8.2.1-545206cc9f70-Linux-x86_64.tgz
-
-
-cd splunk
-./splunk start --accept-license
-
-
-http://<your_ec2_instance_public_ip>:8000
-
-
-wget -O splunk-<version>-<build>-Linux-x86_64.tgz https://www.splunk.com/download/some-link-to-splunk-package
-
-
-gzip: stdin: unexpected end of file
-tar: Child returned status 1
-tar: Error is not recoverable: exiting now
-[root@ec2lm-02abb75e5 ec2-user]#
