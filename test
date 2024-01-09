@@ -1,0 +1,21 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "*"
+      },
+      "Action": [
+        "es:*",
+        "es:ESHttpGet/*"
+      ],
+      "Resource": "arn:aws-us-gov:es:us-gov-west-1:306251499781:domain/legal/*",
+      "Condition": {
+        "ArnLike": {
+          "aws:SourceArn": "arn:*:*:*:306251499781:*"
+        }
+      }
+    }
+  ]
+}
